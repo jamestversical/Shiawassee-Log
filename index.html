@@ -4,959 +4,252 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shiawassee Ranch Digital Log</title>
-
-  <!-- Supabase JS (must load before our app script) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
-    :root{
-      --bg:#070a09;
-      --panel:rgba(255,255,255,.07);
-      --panel2:rgba(255,255,255,.10);
-      --line:rgba(255,255,255,.12);
-      --text:rgba(255,255,255,.92);
-      --muted:rgba(255,255,255,.62);
-      --accent:#7ee081;
-      --gold:#f2c14e;
-      --danger:#ff6b6b;
-      --shadow:0 16px 55px rgba(0,0,0,.38);
-      --r18:18px;
-      --r24:24px;
-      --max:980px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 900px at 18% 5%, rgba(126,224,129,0.18), transparent 60%),
-        radial-gradient(900px 700px at 88% 15%, rgba(242,193,78,0.14), transparent 60%),
-        radial-gradient(800px 700px at 40% 95%, rgba(126,224,129,0.10), transparent 60%),
-        linear-gradient(180deg, #050807, #0a0f0d 40%, #050807);
-      min-height:100vh;
-    }
-    .topbar{
-      position:sticky; top:0; z-index:50;
-      backdrop-filter: blur(12px);
-      background: linear-gradient(180deg, rgba(7,10,9,.92), rgba(7,10,9,.55));
-      border-bottom:1px solid var(--line);
-    }
-    .topbar-inner{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:14px 14px 10px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .brand{display:flex; align-items:center; gap:10px; min-width:0}
-    .logo{
-      width:38px;height:38px;border-radius:14px;
-      background:
-        radial-gradient(18px 18px at 30% 30%, rgba(126,224,129,.85), rgba(126,224,129,.10)),
-        radial-gradient(18px 18px at 75% 65%, rgba(242,193,78,.85), rgba(242,193,78,.10)),
-        rgba(255,255,255,.06);
-      border:1px solid var(--line);
-      box-shadow:0 10px 26px rgba(0,0,0,.35);
-    }
-    .brand h1{margin:0; font-size:15px; font-weight:900; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-    .brand .sub{font-size:12px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-    .right{display:flex; align-items:center; gap:10px}
-    .pill{
-      display:flex; align-items:center; gap:8px;
-      padding:9px 12px; border-radius:999px;
-      background:var(--panel); border:1px solid var(--line);
-      box-shadow:0 8px 22px rgba(0,0,0,.22);
-      font-size:12px; color:var(--muted); user-select:none;
-    }
-    .dot{width:9px;height:9px;border-radius:999px;background:#999;box-shadow:0 0 0 4px rgba(153,153,153,.12)}
-    .dot.ok{background:var(--accent);box-shadow:0 0 0 4px rgba(126,224,129,.16)}
-    .dot.bad{background:var(--danger);box-shadow:0 0 0 4px rgba(255,107,107,.16)}
-
-    .wrap{max-width:var(--max); margin:0 auto; padding:14px 14px 120px}
-    .toolbar{
-      margin-top:12px;
-      padding:12px;
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:var(--r24);
-      box-shadow:var(--shadow);
-      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
-    }
-    .search{
-      flex:1; min-width:220px;
-      display:flex; align-items:center; gap:10px;
-      padding:10px 12px;
-      border-radius:14px;
-      background:rgba(0,0,0,.25);
-      border:1px solid var(--line);
-    }
-    .search input{
-      width:100%;
-      background:transparent;
-      border:none;
-      outline:none;
-      color:var(--text);
-      font-size:14px;
-    }
-    .search input::placeholder{color:rgba(255,255,255,.45)}
-    .chiprow{display:flex; gap:8px; flex-wrap:wrap}
-    .chip{
-      padding:8px 10px; border-radius:999px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.04);
-      color:var(--muted);
-      font-size:12px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .chip.on{color:var(--text); border-color:rgba(126,224,129,.35); background:rgba(126,224,129,.10)}
-    .btn{
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      border-radius:14px;
-      padding:10px 12px;
-      font-weight:800;
-      cursor:pointer;
-      box-shadow:0 12px 30px rgba(0,0,0,.24);
-    }
-    .btn.primary{
-      background: linear-gradient(180deg, rgba(126,224,129,.22), rgba(126,224,129,.10));
-      border-color: rgba(126,224,129,.30);
-    }
-    .btn:active{transform:translateY(1px)}
-    .grid{margin-top:12px; display:grid; gap:12px}
-    .stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
-    @media(min-width:720px){ .stats{grid-template-columns:repeat(4,1fr)} }
-    .stat{
-      padding:12px;
-      border-radius:var(--r18);
-      background:rgba(255,255,255,.05);
-      border:1px solid var(--line);
-    }
-    .stat .k{font-size:12px;color:var(--muted)}
-    .stat .v{font-size:18px;font-weight:900;margin-top:2px}
-    .note{
-      padding:14px;
-      border-radius:var(--r24);
-      background:rgba(255,255,255,.04);
-      border:1px solid var(--line);
-      box-shadow: var(--shadow);
-    }
-    .note.published{
-      border-color: rgba(126,224,129,.32);
-      background: linear-gradient(180deg, rgba(126,224,129,.09), rgba(255,255,255,.03));
-    }
-    .noteHead{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
-    .title{font-weight:950; font-size:16px; line-height:1.2}
-    .meta{margin-top:6px; font-size:12px; color:var(--muted)}
-    .body{margin-top:10px; font-size:14px; color:rgba(255,255,255,.86); white-space:pre-wrap}
-    .pills{margin-top:10px; display:flex; flex-wrap:wrap; gap:8px}
-    .pill2{
-      font-size:12px;
-      padding:7px 10px;
-      border-radius:999px;
-      background:rgba(0,0,0,.20);
-      border:1px solid var(--line);
-      color:rgba(255,255,255,.80);
-    }
-    .pill2.good{border-color:rgba(126,224,129,.30); background:rgba(126,224,129,.10); color:rgba(210,255,220,.95)}
-    .pill2.warn{border-color:rgba(242,193,78,.32); background:rgba(242,193,78,.10); color:rgba(255,240,210,.95)}
-    .photos{margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
-    .photos img{width:100%; height:92px; object-fit:cover; border-radius:16px; border:1px solid var(--line)}
-    .empty{
-      text-align:center;
-      padding:26px 12px;
-      color:var(--muted);
-      border:1px dashed rgba(255,255,255,.20);
-      border-radius:var(--r24);
-      background:rgba(255,255,255,.03);
-    }
-    .fab{
-      position:fixed; right:16px; bottom:16px; z-index:60;
-      width:56px;height:56px;border-radius:18px;
-      background: linear-gradient(180deg, rgba(126,224,129,.95), rgba(126,224,129,.65));
-      border:1px solid rgba(126,224,129,.30);
-      box-shadow:0 22px 55px rgba(0,0,0,.45);
-      color:#07110b;
-      font-size:24px;
-      font-weight:1000;
-      cursor:pointer;
-    }
-
-    /* modal */
-    .modal{position:fixed; inset:0; z-index:80; display:none}
-    .modal.on{display:block}
-    .backdrop{position:absolute; inset:0; background:rgba(0,0,0,.62)}
-    .sheet{
-      position:absolute;
-      inset-x:0; bottom:0;
-      background:rgba(7,10,9,.96);
-      border-top:1px solid var(--line);
-      border-radius:24px 24px 0 0;
-      padding:14px;
-    }
-    @media(min-width:720px){
-      .sheet{
-        left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%);
-        width:min(720px, calc(100% - 28px));
-        border-radius:24px;
-        border:1px solid var(--line);
-      }
-    }
-    .sheetHead{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
-    .sheetTitle{font-weight:950; font-size:16px}
-    .sheetSub{font-size:12px; color:var(--muted); margin-top:2px}
-    .row{margin-top:10px; display:grid; gap:10px}
-    .field, .area{
-      width:100%;
-      padding:12px 12px;
-      border-radius:16px;
-      background:rgba(255,255,255,.06);
-      border:1px solid var(--line);
-      color:var(--text);
-      outline:none;
-      font-size:14px;
-    }
-    .area{min-height:120px; resize:vertical}
-    .twocol{display:grid; gap:10px}
-    @media(min-width:720px){ .twocol{grid-template-columns:1fr 1fr} }
-    .inline{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:12px;
-      border-radius:16px;
-      background:rgba(255,255,255,.05);
-      border:1px solid var(--line);
-    }
-    .switch{display:flex; align-items:center; gap:8px; font-size:13px}
-    .switch input{accent-color: var(--accent)}
-    .section{
-      padding:12px;
-      border-radius:16px;
-      background:rgba(255,255,255,.04);
-      border:1px solid var(--line);
-    }
-    .sectionTitle{font-weight:900; font-size:13px}
-    .hint{font-size:12px;color:var(--muted); margin-top:4px}
-    .actionRow{margin-top:10px; display:flex; gap:10px}
-    .actions{margin-top:10px; display:grid; gap:8px}
-    .actionItem{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:10px 10px;
-      border-radius:14px;
-      background:rgba(0,0,0,.25);
-      border:1px solid var(--line);
-      font-size:13px;
-    }
-    .actionItem label{display:flex; align-items:center; gap:8px; min-width:0}
-    .actionItem input{accent-color: var(--accent)}
-    .actionItem .rm{font-size:12px; padding:6px 10px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.05); cursor:pointer}
-    .msg{margin-top:10px; color:rgba(255,145,145,.95); font-size:13px}
-    .rowBtns{margin-top:10px; display:flex; gap:10px}
-    .danger{border-color: rgba(255,107,107,.35); background: rgba(255,107,107,.08)}
-    .namebar{
-      max-width:var(--max);
-      margin:0 auto;
-      padding:0 14px 12px;
-      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
-    }
-    .namebar .namebox{
-      display:flex; align-items:center; gap:10px;
-      padding:10px 12px;
-      border-radius:999px;
-      background:var(--panel);
-      border:1px solid var(--line);
-      box-shadow:0 8px 22px rgba(0,0,0,.18);
-      color:var(--muted);
-      font-size:12px;
-      flex: 1;
-      min-width: 260px;
-    }
-    .namebar input{
-      width:100%;
-      background:transparent;
-      border:none;
-      outline:none;
-      color:var(--text);
-      font-size:13px;
-    }
+    :root { --bg:#f5f7f4; --card:#fff; --line:#d9e0d7; --text:#1f2a20; --muted:#637161; --accent:#2f7b3e; --danger:#b73030; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:var(--text); background:var(--bg); }
+    .container { max-width:1000px; margin:0 auto; padding:14px; display:grid; gap:10px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+    .grid { display:grid; gap:10px; }
+    .grid2 { display:grid; gap:10px; grid-template-columns:1fr; }
+    .grid3 { display:grid; gap:10px; grid-template-columns:1fr; }
+    @media (min-width:760px){ .grid2{grid-template-columns:1fr 1fr;} .grid3{grid-template-columns:repeat(3,1fr);} }
+    input, select, textarea, button { font:inherit; }
+    input, select, textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; background:#fff; }
+    textarea { min-height:110px; resize:vertical; }
+    button { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; cursor:pointer; }
+    .primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+    .split { display:flex; flex-wrap:wrap; gap:8px; }
+    .split > * { flex:1; min-width:130px; }
+    .muted { color:var(--muted); font-size:.9rem; }
+    .error { color:var(--danger); }
+    .ok { color:var(--accent); }
+    .hidden { display:none !important; }
+    .entry { border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; }
+    .meta { display:flex; flex-wrap:wrap; gap:8px; color:var(--muted); font-size:.85rem; margin-bottom:8px; }
+    .chip { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:3px 8px; margin:2px 4px 2px 0; font-size:.8rem; }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
   </style>
 </head>
-
 <body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="logo"></div>
-        <div style="min-width:0">
-          <h1>Shiawassee Ranch</h1>
-          <div class="sub">Digital Log - shared family notes</div>
-        </div>
+  <div class="container">
+    <section class="card">
+      <h1 style="margin:0">Shiawassee Ranch Digital Log</h1>
+      <div class="muted">Open ranch log: no login required.</div>
+    </section>
+
+    <section class="card grid">
+      <h2 id="formTitle" style="margin:0; font-size:1.05rem;">New Entry</h2>
+      <div class="grid3">
+        <label>Your Name<input id="author" placeholder="Enter your name" /></label>
+        <label>Date<input id="date" type="date" required /></label>
+        <label>Category<select id="category"></select></label>
       </div>
-      <div class="right">
-        <div class="pill" title="Connection status">
-          <span id="dot" class="dot"></span>
-          <span id="connText">...</span>
-        </div>
-        <button id="newBtnTop" class="btn primary">+ New</button>
+      <label>Title<input id="title" placeholder="Short summary" /></label>
+      <label>Description<textarea id="description" placeholder="Detailed notes"></textarea></label>
+      <div class="grid2">
+        <label>Tags (comma separated)<input id="tags" placeholder="tractor, north field" /></label>
+        <label>Photo URLs (comma separated, optional)<input id="photoUrls" placeholder="https://..." /></label>
       </div>
-    </div>
-
-    <div class="namebar">
-      <div class="namebox">
-        <span style="opacity:.9">Posting as</span>
-        <input id="who" placeholder="Enter your name (saved on this device)" />
+      <div class="split">
+        <button id="saveBtn" class="primary">Save</button>
+        <button id="cancelBtn" class="hidden">Cancel Edit</button>
+        <button id="deleteBtn" class="danger hidden">Delete</button>
       </div>
+      <div id="saveMsg" class="muted"></div>
+    </section>
 
-      <div class="pill" title="Workspace (secret link)">
-        <span style="opacity:.9">Workspace</span>
-        <span id="wsLabel" style="color:rgba(255,255,255,.9); font-weight:900"></span>
+    <section class="card grid">
+      <div class="grid3">
+        <label>Keyword<input id="fKeyword" placeholder="title or description" /></label>
+        <label>Category<select id="fCategory"><option value="">All</option></select></label>
+        <label>Author<input id="fAuthor" placeholder="author" /></label>
       </div>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="toolbar">
-      <div class="search">
-        <span style="opacity:.75">⌕</span>
-        <input id="q" placeholder="Search notes, tags, location, author..." />
+      <div class="grid3">
+        <label>From<input id="fFrom" type="date" /></label>
+        <label>To<input id="fTo" type="date" /></label>
+        <label>Tag<input id="fTags" placeholder="tag" /></label>
       </div>
-
-      <div class="chiprow">
-        <div class="chip on" data-chip="all">All</div>
-        <div class="chip" data-chip="published">Published</div>
-        <div class="chip" data-chip="open">Open actions</div>
-        <div class="chip" data-chip="photos">Photos</div>
+      <div class="split">
+        <button id="applyFilters" class="primary">Apply Filters</button>
+        <button id="clearFilters">Clear</button>
       </div>
+    </section>
 
-      <button id="refreshBtn" class="btn">Refresh</button>
-    </div>
-
-    <div class="grid">
-      <div class="stats">
-        <div class="stat"><div class="k">Total</div><div class="v" id="sTotal">-</div></div>
-        <div class="stat"><div class="k">Published</div><div class="v" id="sPub">-</div></div>
-        <div class="stat"><div class="k">Open actions</div><div class="v" id="sOpen">-</div></div>
-        <div class="stat"><div class="k">Photos</div><div class="v" id="sPhotos">-</div></div>
+    <section class="card">
+      <div class="top">
+        <h2 style="margin:0; font-size:1.05rem;">Log Feed</h2>
+        <span id="countLabel" class="muted">0 entries</span>
       </div>
-
-      <div id="list" class="grid"></div>
-      <div id="empty" class="empty" style="display:none">
-        <div style="font-weight:950; font-size:16px; color:rgba(255,255,255,.9)">No notes yet</div>
-        <div style="margin-top:6px">Tap <span style="color:var(--accent); font-weight:900">+ New</span> to start the log.</div>
-      </div>
-    </div>
-  </div>
-
-  <button class="fab" id="fab">+</button>
-
-  <!-- Modal -->
-  <div class="modal" id="modal">
-    <div class="backdrop" id="backdrop"></div>
-    <div class="sheet">
-      <div class="sheetHead">
-        <div>
-          <div class="sheetTitle" id="mTitle">New Log Entry</div>
-          <div class="sheetSub" id="mSub">Saved to cloud. Offline entries sync automatically.</div>
-        </div>
-        <button class="btn" id="closeBtn">Close</button>
-      </div>
-
-      <div class="row">
-        <input class="field" id="t" placeholder="Title (optional)" />
-        <textarea class="area" id="b" placeholder="What happened at the ranch?"></textarea>
-
-        <div class="twocol">
-          <input class="field" id="loc" placeholder="Location (Cabin, Lake, Trails...)" />
-          <input class="field" id="typ" placeholder="Type (Maintenance, Wildlife...)" />
-        </div>
-
-        <input class="field" id="tags" placeholder="Tags (comma separated)" />
-
-        <div class="inline">
-          <div class="switch">
-            <input type="checkbox" id="pub" checked />
-            <label for="pub">Publish to shared log</label>
-          </div>
-          <div style="font-size:12px;color:var(--muted)" id="saveStatus">-</div>
-        </div>
-
-        <div class="section">
-          <div class="sectionTitle">Photos</div>
-          <div class="hint">Add pictures from your phone camera. (Uploads require internet.)</div>
-          <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
-            <label class="btn" style="cursor:pointer">
-              Add photos
-              <input id="photo" type="file" accept="image/*" capture="environment" multiple style="display:none" />
-            </label>
-            <div style="font-size:12px;color:var(--muted)" id="photoCount">0 selected</div>
-          </div>
-          <div class="photos" id="photoPrev" style="margin-top:10px"></div>
-        </div>
-
-        <div class="section">
-          <div class="sectionTitle">Action Items</div>
-          <div class="hint">Hit Enter to add a task.</div>
-          <div class="actionRow">
-            <input class="field" id="aIn" placeholder="Add action and press Enter" />
-          </div>
-          <div class="actions" id="aList"></div>
-        </div>
-
-        <div class="rowBtns">
-          <button class="btn primary" id="saveBtn" style="flex:1">Save</button>
-          <button class="btn danger" id="delBtn" style="display:none">Delete</button>
-        </div>
-
-        <div class="msg" id="msg"></div>
-      </div>
-    </div>
+      <div id="feed"></div>
+      <button id="loadMoreBtn" class="hidden" style="margin-top:10px;">Load more</button>
+    </section>
   </div>
 
 <script>
-/*** CONFIG (updated with your Worker URL) ***/
 const SUPABASE_URL = "https://gpbusqwvjjhpwitoovkd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
-const WORKER_BASE_URL = "https://shiawassee-ranch-upload.james-t-versical.workers.dev";
+const PAGE_SIZE = 20;
+const CATEGORIES = ["Property Maintenance","Equipment","Wildlife Observation","Hunting","Improvements","Guests","Weather","General Notes"];
 
-/*** Secret workspace in URL: #w=<unguessable>  ***/
-function getWorkspaceId() {
-  const h = location.hash || "";
-  const m = h.match(/(?:^|[#&])w=([^&]+)/);
-  if (m && m[1]) return decodeURIComponent(m[1]);
-  const gen = "shiawassee-ranch-" + cryptoRandomId().replaceAll("-", "");
-  location.hash = `w=${encodeURIComponent(gen)}`;
-  return gen;
-}
-const WORKSPACE_ID = getWorkspaceId();
-
-/*** UI refs ***/
-const dot = document.getElementById("dot");
-const connText = document.getElementById("connText");
-const wsLabel = document.getElementById("wsLabel");
-wsLabel.textContent = WORKSPACE_ID.slice(0, 14) + "...";
-
-const who = document.getElementById("who");
-const q = document.getElementById("q");
-const list = document.getElementById("list");
-const empty = document.getElementById("empty");
-
-const sTotal = document.getElementById("sTotal");
-const sPub = document.getElementById("sPub");
-const sOpen = document.getElementById("sOpen");
-const sPhotos = document.getElementById("sPhotos");
-
-const chips = Array.from(document.querySelectorAll(".chip"));
-let activeChip = "all";
-
-/*** modal refs ***/
-const modal = document.getElementById("modal");
-const backdrop = document.getElementById("backdrop");
-const closeBtn = document.getElementById("closeBtn");
-const mTitle = document.getElementById("mTitle");
-const saveStatus = document.getElementById("saveStatus");
-const msg = document.getElementById("msg");
-
-const t = document.getElementById("t");
-const b = document.getElementById("b");
-const loc = document.getElementById("loc");
-const typ = document.getElementById("typ");
-const tags = document.getElementById("tags");
-const pub = document.getElementById("pub");
-
-const photo = document.getElementById("photo");
-const photoPrev = document.getElementById("photoPrev");
-const photoCount = document.getElementById("photoCount");
-
-const aIn = document.getElementById("aIn");
-const aList = document.getElementById("aList");
-
-const saveBtn = document.getElementById("saveBtn");
-const delBtn = document.getElementById("delBtn");
-
-document.getElementById("newBtnTop").onclick = () => openCreate();
-document.getElementById("fab").onclick = () => openCreate();
-document.getElementById("refreshBtn").onclick = () => loadNotes();
-
-backdrop.onclick = closeModal;
-closeBtn.onclick = closeModal;
-
-/*** Persist name locally ***/
-who.value = localStorage.getItem("sr_name") || "";
-who.addEventListener("input", () => localStorage.setItem("sr_name", who.value.trim()));
-
-function authorName() {
-  const n = (who.value || "").trim();
-  return n || "Anonymous";
-}
-
-/*** Supabase client (use sb, NOT supabase) ***/
-if (!window.supabase || !window.supabase.createClient) {
-  throw new Error("Supabase library didn't load. Make sure the <script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2\"></script> tag is in <head> and not blocked.");
-}
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const state = { entries: [], page: 0, hasMore: false, editing: null };
+const $ = (id) => document.getElementById(id);
 
-/*** State ***/
-let notes = [];
-let editingId = null;
-let editingExistingPhotos = []; // urls
-let newPhotoFiles = [];         // File[]
-let actions = [];               // {id,text,done}
+function today() { return new Date().toISOString().slice(0,10); }
+function esc(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+function setMsg(text, cls="muted") { const el=$("saveMsg"); el.className=cls; el.textContent=text; }
 
-/*** Connectivity badge ***/
-function updateConn() {
-  const online = navigator.onLine;
-  dot.className = "dot " + (online ? "ok" : "bad");
-  connText.textContent = online ? "Online" : "Offline";
-}
-window.addEventListener("online", updateConn);
-window.addEventListener("offline", updateConn);
-updateConn();
-
-/*** Chips ***/
-chips.forEach(c => c.onclick = () => {
-  chips.forEach(x => x.classList.remove("on"));
-  c.classList.add("on");
-  activeChip = c.dataset.chip;
-  render();
-});
-
-/*** Search ***/
-q.addEventListener("input", render);
-
-/*** Offline queue (IndexedDB) ***/
-const DB_NAME = "sr_log_db";
-const DB_STORE = "offline_queue";
-let idb;
-
-function idbOpen() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      db.createObjectStore(DB_STORE, { keyPath: "qid" });
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+function normalize(row) {
+  return {
+    id: row.id,
+    date: row.event_at ? String(row.event_at).slice(0,10) : (row.created_at ? String(row.created_at).slice(0,10) : today()),
+    category: row.entry_type || "General Notes",
+    title: row.title || "",
+    description: row.body || "",
+    tags: row.tags || [],
+    photos: row.photo_urls || [],
+    author: row.author || "Unknown",
+    created_at: row.created_at || row.event_at || new Date().toISOString()
+  };
 }
 
-async function queueWrite(op) {
-  if (!idb) idb = await idbOpen();
-  const tx = idb.transaction(DB_STORE, "readwrite");
-  tx.objectStore(DB_STORE).put(op);
-  return new Promise((res, rej) => {
-    tx.oncomplete = () => res();
-    tx.onerror = () => rej(tx.error);
-  });
+function toPayload() {
+  const date = $("date").value || today();
+  return {
+    title: $("title").value.trim(),
+    body: $("description").value.trim(),
+    tags: $("tags").value.split(",").map((x) => x.trim()).filter(Boolean),
+    photo_urls: $("photoUrls").value.split(",").map((x) => x.trim()).filter(Boolean),
+    author: $("author").value.trim() || "Unknown",
+    entry_type: $("category").value,
+    event_at: `${date}T12:00:00.000Z`,
+    updated_at: new Date().toISOString()
+  };
 }
 
-async function drainQueue() {
-  if (!navigator.onLine) return;
-  if (!idb) idb = await idbOpen();
-
-  const tx = idb.transaction(DB_STORE, "readonly");
-  const store = tx.objectStore(DB_STORE);
-  const ops = [];
-
-  await new Promise((res) => {
-    store.openCursor().onsuccess = (e) => {
-      const cur = e.target.result;
-      if (!cur) return res();
-      ops.push(cur.value);
-      cur.continue();
-    };
-  });
-
-  for (const op of ops) {
-    try {
-      if (op.kind === "upsert") await sb.from("notes").upsert(op.payload);
-      if (op.kind === "delete") await sb.from("notes").delete().eq("id", op.id).eq("workspace_id", WORKSPACE_ID);
-
-      const t2 = idb.transaction(DB_STORE, "readwrite");
-      t2.objectStore(DB_STORE).delete(op.qid);
-      await new Promise((res) => (t2.oncomplete = res));
-    } catch (e) {
-      break;
-    }
-  }
-  await loadNotes();
-}
-window.addEventListener("online", drainQueue);
-
-/*** Realtime subscription ***/
-let channel = null;
-function subscribeRealtime() {
-  if (channel) sb.removeChannel(channel);
-  channel = sb.channel("sr_notes_" + WORKSPACE_ID)
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "notes",
-      filter: `workspace_id=eq.${WORKSPACE_ID}`
-    }, () => loadNotes())
-    .subscribe();
+function matchesFilters(e) {
+  const kw = $("fKeyword").value.trim().toLowerCase();
+  const cat = $("fCategory").value;
+  const author = $("fAuthor").value.trim().toLowerCase();
+  const from = $("fFrom").value;
+  const to = $("fTo").value;
+  const tag = $("fTags").value.trim().toLowerCase();
+  if (cat && e.category !== cat) return false;
+  if (author && !e.author.toLowerCase().includes(author)) return false;
+  if (from && e.date < from) return false;
+  if (to && e.date > to) return false;
+  if (tag && !(e.tags || []).some((t) => String(t).toLowerCase().includes(tag))) return false;
+  if (kw && !`${e.title} ${e.description}`.toLowerCase().includes(kw)) return false;
+  return true;
 }
 
-/*** Load + render ***/
-function passFilters(n) {
-  if (activeChip === "published" && !n.is_published) return false;
-  if (activeChip === "open") {
-    const open = (n.actions || []).filter(a => !a.done).length;
-    if (open === 0) return false;
-  }
-  if (activeChip === "photos") {
-    if (!n.photo_urls || n.photo_urls.length === 0) return false;
-  }
-  const query = (q.value || "").trim().toLowerCase();
-  if (!query) return true;
+function renderFeed() {
+  const feed = $("feed");
+  feed.innerHTML = "";
+  $("countLabel").textContent = `${state.entries.length} entries`;
+  if (!state.entries.length) feed.innerHTML = `<div class="muted">No entries found.</div>`;
 
-  const hay = [
-    n.title || "",
-    n.body || "",
-    n.author || "",
-    n.location || "",
-    n.entry_type || "",
-    (n.tags || []).join(" ")
-  ].join(" ").toLowerCase();
-
-  return hay.includes(query);
-}
-
-function computeStats() {
-  sTotal.textContent = notes.length;
-  sPub.textContent = notes.filter(n => n.is_published).length;
-  sOpen.textContent = notes.reduce((acc, n) => acc + (n.actions || []).filter(a => !a.done).length, 0);
-  sPhotos.textContent = notes.reduce((acc, n) => acc + ((n.photo_urls || []).length), 0);
-}
-
-function render() {
-  list.innerHTML = "";
-  const filtered = notes.filter(passFilters);
-  empty.style.display = filtered.length ? "none" : "block";
-
-  for (const n of filtered) {
-    const div = document.createElement("div");
-    div.className = "note " + (n.is_published ? "published" : "");
-    const when = n.event_at ? new Date(n.event_at).toLocaleString() : "";
-    const openActions = (n.actions || []).filter(a => !a.done).length;
-    const photos = (n.photo_urls || []).slice(0,3);
-
-    div.innerHTML = `
-      <div class="noteHead">
-        <div style="min-width:0">
-          <div class="title">${escapeHtml(n.title || "Log Entry")}</div>
-          <div class="meta">${escapeHtml(when)} - ${escapeHtml(n.author || "")}</div>
-        </div>
-        <button class="btn" style="padding:9px 12px">Edit</button>
-      </div>
-
-      <div class="body">${escapeHtml(n.body || "")}</div>
-
-      <div class="pills">
-        <span class="pill2 ${n.is_published ? "good" : ""}">${n.is_published ? "Published" : "Draft"}</span>
-        ${n.location ? `<span class="pill2">${escapeHtml(n.location)}</span>` : ""}
-        ${n.entry_type ? `<span class="pill2">${escapeHtml(n.entry_type)}</span>` : ""}
-        ${openActions ? `<span class="pill2 warn">${openActions} open</span>` : ""}
-        ${(n.tags || []).slice(0,6).map(t => `<span class="pill2">#${escapeHtml(t)}</span>`).join("")}
-      </div>
-
-      ${photos.length ? `<div class="photos">${photos.map(u => `<a href="${u}" target="_blank" rel="noreferrer"><img src="${u}"/></a>`).join("")}</div>` : ""}
-    `;
-
-    div.querySelector("button").onclick = () => openEdit(n);
-    list.appendChild(div);
-  }
-}
-
-async function loadNotes() {
-  const { data, error } = await sb
-    .from("notes")
-    .select("*")
-    .eq("workspace_id", WORKSPACE_ID)
-    .order("event_at", { ascending: false })
-    .limit(500);
-
-  if (!error) notes = data || [];
-  computeStats();
-  render();
-}
-
-/*** Modal logic ***/
-function openCreate() {
-  editingId = null;
-  editingExistingPhotos = [];
-  newPhotoFiles = [];
-  actions = [];
-  mTitle.textContent = "New Log Entry";
-  delBtn.style.display = "none";
-  clearModal();
-  pub.checked = true;
-  renderActions();
-  renderPhotoPreview();
-  openModal();
-}
-function openEdit(n) {
-  editingId = n.id;
-  mTitle.textContent = "Edit Log Entry";
-  delBtn.style.display = "inline-block";
-  msg.textContent = "";
-  saveStatus.textContent = "-";
-
-  t.value = n.title || "";
-  b.value = n.body || "";
-  loc.value = n.location || "";
-  typ.value = n.entry_type || "";
-  tags.value = (n.tags || []).join(", ");
-  pub.checked = !!n.is_published;
-
-  actions = [...(n.actions || [])];
-  editingExistingPhotos = [...(n.photo_urls || [])];
-  newPhotoFiles = [];
-  renderActions();
-  renderPhotoPreview();
-  openModal();
-}
-function openModal() { modal.classList.add("on"); document.body.style.overflow="hidden"; }
-function closeModal() { modal.classList.remove("on"); document.body.style.overflow=""; clearModal(); }
-function clearModal() {
-  t.value=""; b.value=""; loc.value=""; typ.value=""; tags.value="";
-  photo.value=""; photoPrev.innerHTML=""; photoCount.textContent="0 selected";
-  aIn.value=""; aList.innerHTML="";
-  msg.textContent=""; saveStatus.textContent="-";
-}
-
-/*** Actions ***/
-aIn.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const text = (aIn.value || "").trim();
-    if (!text) return;
-    actions.push({ id: cryptoRandomId(), text, done: false });
-    aIn.value="";
-    renderActions();
-  }
-});
-
-function renderActions() {
-  aList.innerHTML = "";
-  if (!actions.length) {
-    aList.innerHTML = `<div class="hint">No action items yet.</div>`;
-    return;
-  }
-  for (const a of actions) {
-    const row = document.createElement("div");
-    row.className = "actionItem";
+  for (const e of state.entries) {
+    const row = document.createElement("article");
+    row.className = "entry";
+    const tags = (e.tags || []).map((t) => `<span class="chip">#${esc(t)}</span>`).join("");
+    const photos = (e.photos || []).map((p) => `<a href="${esc(p)}" target="_blank" rel="noreferrer" class="chip">photo</a>`).join(" ");
     row.innerHTML = `
-      <label>
-        <input type="checkbox" ${a.done ? "checked" : ""} />
-        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; ${a.done ? "text-decoration:line-through; color:rgba(255,255,255,.55)" : ""}">
-          ${escapeHtml(a.text)}
-        </span>
-      </label>
-      <button class="rm">Remove</button>
+      <h3 style="margin:0 0 6px;">${esc(e.title)}</h3>
+      <div class="meta"><span>${esc(e.date)}</span><span>${esc(e.category)}</span><span>${esc(e.author)}</span><span>${new Date(e.created_at).toLocaleString()}</span></div>
+      <div>${esc(e.description)}</div>
+      <div style="margin-top:6px;">${tags}</div>
+      ${photos ? `<div style="margin-top:6px;">${photos}</div>` : ""}
+      <div class="split" style="margin-top:8px;"><button data-edit="${e.id}">Edit</button><button data-delete="${e.id}" class="danger">Delete</button></div>
     `;
-    row.querySelector("input").onchange = (ev) => { a.done = ev.target.checked; renderActions(); };
-    row.querySelector("button").onclick = () => { actions = actions.filter(x => x.id !== a.id); renderActions(); };
-    aList.appendChild(row);
+    feed.appendChild(row);
   }
+
+  feed.querySelectorAll("button[data-edit]").forEach((b) => b.onclick = () => startEdit(b.dataset.edit));
+  feed.querySelectorAll("button[data-delete]").forEach((b) => b.onclick = () => quickDelete(b.dataset.delete));
+  $("loadMoreBtn").classList.toggle("hidden", !state.hasMore);
 }
 
-/*** Photos ***/
-photo.addEventListener("change", async () => {
-  const files = Array.from(photo.files || []);
-  const cap = Math.max(0, 12 - (editingExistingPhotos.length + newPhotoFiles.length));
-  newPhotoFiles = newPhotoFiles.concat(files.slice(0, cap));
-  photoCount.textContent = `${newPhotoFiles.length} selected`;
-  renderPhotoPreview();
-});
-
-function renderPhotoPreview() {
-  photoPrev.innerHTML = "";
-
-  editingExistingPhotos.forEach((url, idx) => {
-    const wrap = document.createElement("div");
-    wrap.style.position="relative";
-    wrap.innerHTML = `
-      <img src="${url}" />
-      <button class="btn" style="position:absolute; top:6px; right:6px; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.55)">✕</button>
-    `;
-    wrap.querySelector("button").onclick = () => {
-      editingExistingPhotos.splice(idx, 1);
-      renderPhotoPreview();
-    };
-    photoPrev.appendChild(wrap);
-  });
-
-  newPhotoFiles.forEach((file, idx) => {
-    const objUrl = URL.createObjectURL(file);
-    const wrap = document.createElement("div");
-    wrap.style.position="relative";
-    wrap.innerHTML = `
-      <img src="${objUrl}" />
-      <button class="btn" style="position:absolute; top:6px; right:6px; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.55)">✕</button>
-    `;
-    wrap.querySelector("button").onclick = () => {
-      newPhotoFiles.splice(idx, 1);
-      photoCount.textContent = `${newPhotoFiles.length} selected`;
-      renderPhotoPreview();
-    };
-    photoPrev.appendChild(wrap);
-  });
+async function loadEntries() {
+  const { data, error } = await sb.from("notes").select("*").order("event_at", { ascending:false }).order("created_at", { ascending:false }).limit(500);
+  if (error) return setMsg(`Load failed: ${error.message}`, "error");
+  const filtered = (data || []).map(normalize).filter(matchesFilters);
+  const limit = (state.page + 1) * PAGE_SIZE;
+  state.hasMore = filtered.length > limit;
+  state.entries = filtered.slice(0, limit);
+  renderFeed();
 }
 
-/*** Save / Delete ***/
-saveBtn.onclick = async () => {
-  msg.textContent = "";
-  const title = (t.value || "").trim();
-  const body = (b.value || "").trim();
-  const location = (loc.value || "").trim();
-  const entry_type = (typ.value || "").trim();
-  const tagArr = (tags.value || "").split(",").map(x => x.trim()).filter(Boolean);
-  const is_published = !!pub.checked;
+function resetForm() {
+  state.editing = null;
+  $("formTitle").textContent = "New Entry";
+  ["title","description","tags","photoUrls"].forEach((id) => $(id).value = "");
+  $("deleteBtn").classList.add("hidden");
+  $("cancelBtn").classList.add("hidden");
+  setMsg("");
+}
 
-  if (!body) { msg.textContent = "Please enter what happened (body is required)."; return; }
+function startEdit(id) {
+  const e = state.entries.find((x) => x.id === id);
+  if (!e) return;
+  state.editing = e;
+  $("formTitle").textContent = "Edit Entry";
+  $("author").value = e.author;
+  $("date").value = e.date;
+  $("category").value = e.category;
+  $("title").value = e.title;
+  $("description").value = e.description;
+  $("tags").value = (e.tags || []).join(", ");
+  $("photoUrls").value = (e.photos || []).join(", ");
+  $("deleteBtn").classList.remove("hidden");
+  $("cancelBtn").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Saving...";
-  saveStatus.textContent = navigator.onLine ? "Saving..." : "Queued (offline)...";
+async function quickDelete(id) {
+  if (!confirm("Delete this entry?")) return;
+  const { error } = await sb.from("notes").delete().eq("id", id);
+  if (error) return setMsg(error.message, "error");
+  if (state.editing?.id === id) resetForm();
+  await loadEntries();
+}
 
-  const id = editingId || cryptoRandomId();
-  const now = new Date().toISOString();
-
-  try {
-    let uploadedUrls = [];
-    if (newPhotoFiles.length) {
-      if (!navigator.onLine) throw new Error("You're offline. Save now, then edit later to upload photos.");
-      uploadedUrls = await uploadPhotos(id, newPhotoFiles);
-    }
-
-    const payload = {
-      id,
-      workspace_id: WORKSPACE_ID,
-      updated_at: now,
-      event_at: now,
-      author: authorName(),
-      title,
-      body,
-      location: location || null,
-      entry_type: entry_type || null,
-      tags: tagArr,
-      is_published,
-      actions,
-      photo_urls: [...editingExistingPhotos, ...uploadedUrls],
-      pending: !navigator.onLine
-    };
-
-    if (!editingId) payload.created_at = now;
-
-    if (navigator.onLine) {
-      const { error } = await sb.from("notes").upsert(payload);
-      if (error) throw error;
-      saveStatus.textContent = "Saved ✅";
-      await loadNotes();
-      closeModal();
-    } else {
-      await queueWrite({ qid: cryptoRandomId(), kind: "upsert", payload });
-      saveStatus.textContent = "Queued ✅";
-      notes = [payload, ...notes.filter(n => n.id !== payload.id)];
-      computeStats(); render();
-      closeModal();
-    }
-  } catch (e) {
-    msg.textContent = e?.message || "Save failed.";
-    saveStatus.textContent = "-";
-  } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Save";
-    newPhotoFiles = [];
-    photoCount.textContent = "0 selected";
+async function saveEntry() {
+  const payload = toPayload();
+  if (!payload.title || !payload.body || !payload.entry_type) return setMsg("Name, category, title, and description are required.", "error");
+  setMsg("Saving...");
+  let error;
+  if (state.editing?.id) {
+    ({ error } = await sb.from("notes").update(payload).eq("id", state.editing.id));
+  } else {
+    ({ error } = await sb.from("notes").insert(payload));
   }
-};
-
-delBtn.onclick = async () => {
-  if (!editingId) return;
-  if (!confirm("Delete this log entry?")) return;
-
-  delBtn.disabled = true;
-  delBtn.textContent = "Deleting...";
-
-  try {
-    if (navigator.onLine) {
-      const { error } = await sb.from("notes").delete().eq("id", editingId).eq("workspace_id", WORKSPACE_ID);
-      if (error) throw error;
-      await loadNotes();
-      closeModal();
-    } else {
-      await queueWrite({ qid: cryptoRandomId(), kind: "delete", id: editingId });
-      notes = notes.filter(n => n.id !== editingId);
-      computeStats(); render();
-      closeModal();
-    }
-  } catch (e) {
-    msg.textContent = e?.message || "Delete failed.";
-  } finally {
-    delBtn.disabled = false;
-    delBtn.textContent = "Delete";
-  }
-};
-
-/*** Upload helpers (Worker -> R2) ***/
-async function uploadPhotos(noteId, files) {
-  const urls = [];
-  for (const f of files) {
-    const compressed = await compressImageFile(f, 1600, 0.78);
-    const form = new FormData();
-    form.append("file", compressed);
-
-    const res = await fetch(`${WORKER_BASE_URL}/upload?workspace_id=${encodeURIComponent(WORKSPACE_ID)}&note_id=${encodeURIComponent(noteId)}`, {
-      method: "POST",
-      body: form
-    });
-    if (!res.ok) throw new Error("Photo upload failed.");
-    const out = await res.json();
-    urls.push(out.url);
-  }
-  return urls;
+  if (error) return setMsg(error.message, "error");
+  setMsg("Saved.", "ok");
+  resetForm();
+  state.page = 0;
+  await loadEntries();
 }
 
-async function compressImageFile(file, maxDim = 1600, quality = 0.78) {
-  if (!file.type.startsWith("image/")) return file;
-  const img = await fileToImage(file);
-
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const w = Math.round(img.width * scale);
-  const h = Math.round(img.height * scale);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, w, h);
-
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
-  return new File([blob], sanitizeFilename(file.name).replace(/\.(png|webp|heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
-}
-function fileToImage(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
+function initCategoryOptions() {
+  const opts = CATEGORIES.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  $("category").innerHTML = opts;
+  $("fCategory").innerHTML = `<option value="">All</option>${opts}`;
 }
 
-/*** Utilities ***/
-function escapeHtml(str){
-  return (str||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
-}
-function cryptoRandomId(){ return (crypto?.randomUUID?.() || Math.random().toString(36).slice(2)); }
-function sanitizeFilename(name){ return String(name||"photo.jpg").replace(/[^a-z0-9._-]/gi,"_"); }
-
-/*** Init ***/
-(async function init() {
-  await loadNotes();
-  subscribeRealtime();
-  await drainQueue();
+(function init() {
+  initCategoryOptions();
+  $("date").value = today();
+  $("saveBtn").onclick = saveEntry;
+  $("cancelBtn").onclick = resetForm;
+  $("deleteBtn").onclick = () => state.editing?.id && quickDelete(state.editing.id);
+  $("applyFilters").onclick = async () => { state.page = 0; await loadEntries(); };
+  $("clearFilters").onclick = async () => { ["fKeyword","fCategory","fAuthor","fFrom","fTo","fTags"].forEach((id) => $(id).value = ""); state.page = 0; await loadEntries(); };
+  $("loadMoreBtn").onclick = async () => { state.page += 1; await loadEntries(); };
+  loadEntries();
 })();
 </script>
 </body>
