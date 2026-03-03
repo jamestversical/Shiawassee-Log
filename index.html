@@ -51,7 +51,7 @@
       <label>Description<textarea id="description" placeholder="Detailed notes"></textarea></label>
       <div class="grid2">
         <label>Tags (comma separated)<input id="tags" placeholder="tractor, north field" /></label>
-        <label>Photo URLs (comma separated, optional)<input id="photoUrls" placeholder="https://..." /></label>
+        <label>Photos (optional)<input id="photos" type="file" accept="image/*" multiple /></label>
       </div>
       <div class="split">
         <button id="saveBtn" class="primary">Save</button>
@@ -91,11 +91,12 @@
 <script>
 const SUPABASE_URL = "https://gpbusqwvjjhpwitoovkd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
+const PHOTO_BUCKET = "log-photos";
 const PAGE_SIZE = 20;
 const CATEGORIES = ["Property Maintenance","Equipment","Wildlife Observation","Hunting","Improvements","Guests","Weather","General Notes"];
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const state = { entries: [], page: 0, hasMore: false, editing: null };
+const state = { entries: [], page: 0, hasMore: false, editing: null, selectedFiles: [] };
 const $ = (id) => document.getElementById(id);
 
 function today() { return new Date().toISOString().slice(0,10); }
@@ -122,12 +123,24 @@ function toPayload() {
     title: $("title").value.trim(),
     body: $("description").value.trim(),
     tags: $("tags").value.split(",").map((x) => x.trim()).filter(Boolean),
-    photo_urls: $("photoUrls").value.split(",").map((x) => x.trim()).filter(Boolean),
     author: $("author").value.trim() || "Unknown",
     entry_type: $("category").value,
     event_at: `${date}T12:00:00.000Z`,
     updated_at: new Date().toISOString()
   };
+}
+
+async function uploadPhotos(files) {
+  const urls = [];
+  for (const file of files) {
+    const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+    const path = `public/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data } = sb.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
 }
 
 function matchesFilters(e) {
@@ -185,8 +198,9 @@ async function loadEntries() {
 
 function resetForm() {
   state.editing = null;
+  state.selectedFiles = [];
   $("formTitle").textContent = "New Entry";
-  ["title","description","tags","photoUrls"].forEach((id) => $(id).value = "");
+  ["title","description","tags","photos"].forEach((id) => $(id).value = "");
   $("deleteBtn").classList.add("hidden");
   $("cancelBtn").classList.add("hidden");
   setMsg("");
@@ -203,7 +217,8 @@ function startEdit(id) {
   $("title").value = e.title;
   $("description").value = e.description;
   $("tags").value = (e.tags || []).join(", ");
-  $("photoUrls").value = (e.photos || []).join(", ");
+  $("photos").value = "";
+  state.selectedFiles = [];
   $("deleteBtn").classList.remove("hidden");
   $("cancelBtn").classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -222,6 +237,12 @@ async function saveEntry() {
   if (!payload.title || !payload.body || !payload.entry_type) return setMsg("Name, category, title, and description are required.", "error");
   setMsg("Saving...");
   let error;
+  try {
+    const uploaded = state.selectedFiles.length ? await uploadPhotos(state.selectedFiles) : [];
+    payload.photo_urls = [...(state.editing?.photos || []), ...uploaded];
+  } catch (e) {
+    return setMsg(`Photo upload failed: ${e.message || e}`, "error");
+  }
   if (state.editing?.id) {
     ({ error } = await sb.from("notes").update(payload).eq("id", state.editing.id));
   } else {
@@ -244,6 +265,9 @@ function initCategoryOptions() {
   initCategoryOptions();
   $("date").value = today();
   $("saveBtn").onclick = saveEntry;
+  $("photos").onchange = () => {
+    state.selectedFiles = Array.from($("photos").files || []);
+  };
   $("cancelBtn").onclick = resetForm;
   $("deleteBtn").onclick = () => state.editing?.id && quickDelete(state.editing.id);
   $("applyFilters").onclick = async () => { state.page = 0; await loadEntries(); };
