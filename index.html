@@ -136,7 +136,7 @@ const PAGE_SIZE = 20;
 const DEFAULT_CATEGORIES = ["Property Maintenance","Equipment","Wildlife Observation","Hunting","Improvements","Guests","Weather","General Notes"];
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const state = { user: null, role: "contributor", categories: [...DEFAULT_CATEGORIES], categoriesEnabled: true, entries: [], page: 0, hasMore: false, editing: null, selectedFiles: [] };
+const state = { user: null, role: "contributor", categories: [...DEFAULT_CATEGORIES], entries: [], page: 0, hasMore: false, editing: null, selectedFiles: [] };
 
 const $ = (id) => document.getElementById(id);
 const authMsg = $("authMsg");
@@ -145,12 +145,6 @@ function setMsg(el, text, cls = "muted") { el.className = cls; el.textContent = 
 function today() { return new Date().toISOString().slice(0, 10); }
 function esc(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
 function csv(v) { return `"${String(v ?? "").replaceAll('"','""')}"`; }
-
-function renderCategoryOptions() {
-  const opts = state.categories.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
-  $("category").innerHTML = opts;
-  $("fCategory").innerHTML = `<option value="">All</option>${opts}`;
-}
 
 function wireAuth() {
   $("signInBtn").onclick = async () => {
@@ -169,16 +163,16 @@ function wireAuth() {
 async function deriveRole(user) {
   const metaRole = user?.app_metadata?.role || user?.user_metadata?.role;
   if (metaRole === "admin" || metaRole === "contributor") return metaRole;
-  const { data, error } = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (error) return "contributor";
+  const { data } = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
   return (data?.role === "admin") ? "admin" : "contributor";
 }
 
 async function loadCategories() {
   const { data, error } = await sb.from("categories").select("name").order("name");
-  state.categoriesEnabled = !error;
   state.categories = (!error && data?.length) ? data.map((c) => c.name) : [...DEFAULT_CATEGORIES];
-  renderCategoryOptions();
+  const opts = state.categories.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  $("category").innerHTML = opts;
+  $("fCategory").innerHTML = `<option value="">All</option>${opts}`;
 }
 
 function resetForm() {
@@ -312,10 +306,7 @@ async function loadEntries(append = false) {
   if (from) query = query.gte("date", from);
   if (to) query = query.lte("date", to);
   if (tag) query = query.contains("tags", [tag]);
-  if (keyword) {
-    const safeKeyword = keyword.replaceAll(",", " ").replaceAll("%", "").trim();
-    if (safeKeyword) query = query.or(`title.ilike.%${safeKeyword}%,description.ilike.%${safeKeyword}%`);
-  }
+  if (keyword) query = query.or(`title.ilike.%${keyword}%,description.ilike.%${keyword}%`);
 
   const { data, error } = await query;
   if (error) return setMsg($("saveMsg"), `Load failed: ${error.message}`, "error");
@@ -375,13 +366,6 @@ function wireForm() {
 async function addCategory() {
   const name = $("newCategory").value.trim();
   if (!name) return;
-  if (!state.categoriesEnabled) {
-    state.categories = Array.from(new Set([...state.categories, name]));
-    $("newCategory").value = "";
-    renderCategoryOptions();
-    renderCategoryAdmin();
-    return;
-  }
   const { error } = await sb.from("categories").insert({ name });
   if (error) return setMsg($("categoryList"), error.message, "error");
   $("newCategory").value = "";
@@ -390,12 +374,6 @@ async function addCategory() {
 }
 
 async function removeCategory(name) {
-  if (!state.categoriesEnabled) {
-    state.categories = state.categories.filter((c) => c !== name);
-    renderCategoryOptions();
-    renderCategoryAdmin();
-    return;
-  }
   const { error } = await sb.from("categories").delete().eq("name", name);
   if (error) return setMsg($("categoryList"), error.message, "error");
   await loadCategories();
@@ -405,38 +383,20 @@ async function removeCategory(name) {
 function renderCategoryAdmin() {
   const host = $("categoryList");
   if (state.role !== "admin") return;
-  const mode = state.categoriesEnabled ? "Stored in Supabase categories table." : "Categories table not available; using local defaults for this session.";
-  host.innerHTML = `<div style="margin-bottom:8px">${esc(mode)}</div>`;
-  const frag = document.createDocumentFragment();
-  state.categories.forEach((c) => {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = `${c} `;
-    const btn = document.createElement("button");
-    btn.textContent = "x";
-    btn.style.padding = "2px 6px";
-    btn.onclick = () => removeCategory(c);
-    chip.appendChild(btn);
-    frag.appendChild(chip);
-    frag.appendChild(document.createTextNode(" "));
-  });
-  host.appendChild(frag);
+  host.innerHTML = state.categories.map((c) => `<span class="chip">${esc(c)} <button data-rm="${esc(c)}" style="padding:2px 6px">x</button></span>`).join(" ");
+  host.querySelectorAll("button[data-rm]").forEach((b) => b.onclick = () => removeCategory(b.dataset.rm));
 }
 
 async function initSession(session) {
   state.user = session?.user || null;
   if (!state.user) return showApp(null);
-  try {
-    state.role = await deriveRole(state.user);
-    showApp(state.user);
-    await loadCategories();
-    resetForm();
-    renderCategoryAdmin();
-    state.page = 0;
-    await loadEntries(false);
-  } catch (e) {
-    setMsg($("authMsg"), `Initialization failed: ${e.message || e}`, "error");
-  }
+  state.role = await deriveRole(state.user);
+  showApp(state.user);
+  await loadCategories();
+  resetForm();
+  renderCategoryAdmin();
+  state.page = 0;
+  await loadEntries(false);
 }
 
 (async function init() {
