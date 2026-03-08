@@ -103,6 +103,22 @@ function today() { return new Date().toISOString().slice(0,10); }
 function esc(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
 function setMsg(text, cls="muted") { const el=$("saveMsg"); el.className=cls; el.textContent=text; }
 
+function formatPhotoUploadError(err) {
+  const message = String(err?.message || err || "Upload failed");
+  const status = Number(err?.statusCode || err?.status || 0);
+  const lower = message.toLowerCase();
+
+  if (status === 404 || lower.includes("bucket") && lower.includes("not found")) {
+    return `Photo upload failed: storage bucket "${PHOTO_BUCKET}" was not found. Confirm the bucket name and that it exists in this Supabase project.`;
+  }
+
+  if (status === 401 || status === 403 || lower.includes("row-level security") || lower.includes("permission") || lower.includes("not authorized")) {
+    return `Photo upload failed: storage policy blocked upload to "${PHOTO_BUCKET}". Add INSERT policy access for the anon role on storage.objects.`;
+  }
+
+  return `Photo upload failed: ${message}`;
+}
+
 function normalize(row) {
   return {
     id: row.id,
@@ -241,7 +257,7 @@ async function saveEntry() {
     const uploaded = state.selectedFiles.length ? await uploadPhotos(state.selectedFiles) : [];
     payload.photo_urls = [...(state.editing?.photos || []), ...uploaded];
   } catch (e) {
-    return setMsg(`Photo upload failed: ${e.message || e}`, "error");
+    return setMsg(formatPhotoUploadError(e), "error");
   }
   if (state.editing?.id) {
     ({ error } = await sb.from("notes").update(payload).eq("id", state.editing.id));
