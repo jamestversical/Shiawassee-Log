@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Shiawassee Ranch Login</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+--bg:#eef3f8;
+--bg-soft:#e4ecf6;
+--card:#ffffff;
+--line:#d3deea;
+--text:#0f2741;
+--muted:#5f7287;
+--accent:#00a7e1;
+--danger:#c23b3b;
+--shadow:0 12px 30px rgba(16,40,69,.10);
+}
+*{box-sizing:border-box;}
+body{
+margin:0;
+min-height:100vh;
+font-family:Calibri,"Segoe UI",Arial,sans-serif;
+color:var(--text);
+background:linear-gradient(180deg,var(--bg-soft)0%,var(--bg)48%);
+display:grid;
+place-items:center;
+padding:18px;
+}
+.card{
+width:min(560px,100%);
+background:var(--card);
+border:1px solid var(--line);
+border-radius:16px;
+padding:16px;
+box-shadow:var(--shadow);
+display:grid;
+gap:10px;
+}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;}
+.tabs button{flex:1;}
+input,button{font:inherit;}
+input{
+width:100%;
+border:1px solid var(--line);
+border-radius:10px;
+padding:10px;
+}
+button{
+border:1px solid var(--line);
+border-radius:10px;
+padding:10px;
+cursor:pointer;
+}
+.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.hidden{display:none!important;}
+.muted{color:var(--muted);font-size:.9rem;}
+.error{color:var(--danger);}
+.ok{color:var(--accent);}
+</style>
+</head>
+
+<body>
+
+<section class="card">
+
+<h1>Shiawassee Ranch Digital Log</h1>
+<div class="muted">Sign in, create account, or reset password</div>
+
+<div class="tabs">
+<button id="showSignInBtn" class="primary">Sign In</button>
+<button id="showSignUpBtn">Create Account</button>
+<button id="showForgotBtn">Forgot Password</button>
+</div>
+
+<form id="signInForm">
+<label>Email<input id="signInEmail" type="email" required></label>
+<label>Password<input id="signInPassword" type="password" required></label>
+<button class="primary">Sign In</button>
+</form>
+
+<form id="signUpForm" class="hidden">
+<label>Email<input id="signUpEmail" type="email" required></label>
+<label>Password<input id="signUpPassword" type="password" required></label>
+<button class="primary">Create Account</button>
+</form>
+
+<form id="forgotForm" class="hidden">
+<label>Email<input id="forgotEmail" type="email" required></label>
+<button class="primary">Send Reset</button>
+</form>
+
+<div id="authMsg" class="muted"></div>
+
+</section>
+
+<script>
+
+const SUPABASE_URL="https://gpbusqwvjjhpwitoovkd.supabase.co";
+
+const SUPABASE_ANON_KEY=
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
+
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+const $=id=>document.getElementById(id)
+
+function msg(t,c="muted"){const e=$("authMsg");e.className=c;e.textContent=t}
+
+function show(p){
+$("signInForm").classList.toggle("hidden",p!=="in")
+$("signUpForm").classList.toggle("hidden",p!=="up")
+$("forgotForm").classList.toggle("hidden",p!=="forgot")
+}
+
+$("showSignInBtn").onclick=()=>show("in")
+$("showSignUpBtn").onclick=()=>show("up")
+$("showForgotBtn").onclick=()=>show("forgot")
+
+$("signInForm").onsubmit=async e=>{
+e.preventDefault()
+
+const email=$("signInEmail").value
+const password=$("signInPassword").value
+
+msg("Signing in...")
+
+const {error}=await sb.auth.signInWithPassword({email,password})
+
+if(error)return msg(error.message,"error")
+
+window.location.href="index.html"
+}
+
+$("signUpForm").onsubmit=async e=>{
+e.preventDefault()
+
+const email=$("signUpEmail").value
+const password=$("signUpPassword").value
+
+msg("Creating account...")
+
+const {error}=await sb.auth.signUp({
+email,
+password,
+options:{emailRedirectTo:window.location.origin+"/login.html"}
+})
+
+if(error)return msg(error.message,"error")
+
+msg("Check your email to confirm.","ok")
+show("in")
+}
+
+$("forgotForm").onsubmit=async e=>{
+e.preventDefault()
+
+const email=$("forgotEmail").value
+
+msg("Sending reset email...")
+
+const {error}=await sb.auth.resetPasswordForEmail(email,{
+redirectTo:window.location.origin+"/reset.html"
+})
+
+if(error)return msg(error.message,"error")
+
+msg("Reset email sent.","ok")
+}
+
+</script>
+</body>
+</html>

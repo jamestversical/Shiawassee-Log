@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Reset Password</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+<h2>Reset Password</h2>
+
+<input id="pw1" placeholder="New password" type="password">
+<br><br>
+<button id="save">Update Password</button>
+
+<div id="msg"></div>
+
+<script>
+
+const sb=supabase.createClient(
+"https://gpbusqwvjjhpwitoovkd.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8"
+)
+
+document.getElementById("save").onclick=async()=>{
+
+const password=document.getElementById("pw1").value
+
+const {error}=await sb.auth.updateUser({password})
+
+if(error) return msg(error.message)
+
+msg("Password updated. Redirecting...")
+
+setTimeout(()=>location.href="login.html",1500)
+
+}
+
+function msg(t){document.getElementById("msg").innerText=t}
+
+</script>
+
+</body>
+</html>

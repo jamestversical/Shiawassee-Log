@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shiawassee Ranch Digital Log</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --bg:#eef3f8; --bg-soft:#e4ecf6; --card:#ffffff; --line:#d3deea; --text:#0f2741; --muted:#5f7287; --accent:#00a7e1; --danger:#c23b3b; --head:#e9f1fa; --shadow:0 12px 30px rgba(16,40,69,.10); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Calibri, "Segoe UI", Arial, sans-serif; color:var(--text); background:linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 48%); }
+    .container { max-width:1000px; margin:0 auto; padding:14px; display:grid; gap:10px; }
+    h1, h2, h3, summary { font-family:Calibri, "Segoe UI", Arial, sans-serif; letter-spacing:.01em; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); }
+    .grid { display:grid; gap:10px; }
+    .grid2 { display:grid; gap:10px; grid-template-columns:1fr; }
+    .grid3 { display:grid; gap:10px; grid-template-columns:1fr; }
+    @media (min-width:760px){ .grid2{grid-template-columns:1fr 1fr;} .grid3{grid-template-columns:repeat(3,1fr);} }
+    input, select, textarea, button { font:inherit; }
+    input, select, textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; background:#fff; }
+    textarea { min-height:110px; resize:vertical; }
+    button { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; cursor:pointer; transition:.16s ease; }
+    button:hover { transform:translateY(-1px); }
+    .primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+    .split { display:flex; flex-wrap:wrap; gap:8px; }
+    .split > * { flex:1; min-width:130px; }
+    .muted { color:var(--muted); font-size:.9rem; }
+    .error { color:var(--danger); }
+    .ok { color:var(--accent); }
+    .hidden { display:none !important; }
+    .feed-wrap { border:1px solid var(--line); border-radius:12px; overflow:auto; max-height:460px; }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; }
+    th, td { border-bottom:1px solid var(--line); padding:8px; vertical-align:top; text-align:left; }
+    th { position:sticky; top:0; background:var(--head); z-index:1; white-space:nowrap; }
+    th button { border:none; background:transparent; padding:0; cursor:pointer; color:var(--text); font-weight:600; }
+    .chip { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:3px 8px; margin:2px 4px 2px 0; font-size:.8rem; }
+    .top { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+    .thumb { width:44px; height:44px; object-fit:cover; border:1px solid var(--line); border-radius:6px; display:block; }
+    .thumb-list { display:flex; gap:6px; flex-wrap:wrap; }
+    .tiny-btn { font-size:.8rem; padding:5px 8px; min-width:auto; }
+    .reserve-grid { display:grid; gap:10px; grid-template-columns:1fr; }
+    .schedule-wrap { border:1px solid var(--line); border-radius:12px; overflow:auto; max-height:320px; }
+    .status-reserved { color:var(--danger); font-weight:600; }
+    .calendar-link { color:var(--accent); text-decoration:underline; cursor:pointer; width:max-content; }
+    dialog { border:1px solid var(--line); border-radius:10px; padding:0; max-width:900px; width:95%; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); }
+    .modal-body { padding:12px 14px; max-height:70vh; overflow:auto; }
+    .calendar-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .calendar-month { border:1px solid var(--line); border-radius:8px; padding:8px; }
+    .calendar-month h4 { margin:0 0 6px; font-size:.95rem; }
+    .calendar-days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:.75rem; }
+    .day { padding:4px; text-align:center; border-radius:6px; border:1px solid transparent; }
+    .day.reserved { border-color:var(--danger); background:#fde8e8; }
+    .search-card { padding:10px 12px; }
+    .search-card summary { cursor:pointer; font-weight:700; font-size:1.08rem; list-style:none; }
+    .search-card summary::-webkit-details-marker { display:none; }
+    .search-card summary::after { content:"▾"; float:right; color:var(--muted); }
+    .search-card[open] summary::after { content:"▴"; }
+    .search-content { margin-top:10px; }
+    .issue-title { font-weight:700; }
+    .issue-desc { overflow-wrap:anywhere; word-break:break-word; max-width:280px; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+    @media (max-width:700px){
+      .feed-wrap table { font-size:.82rem; }
+      .feed-wrap th, .feed-wrap td { padding:6px; }
+      .feed-wrap th:nth-child(5), .feed-wrap td:nth-child(5),
+      .feed-wrap th:nth-child(6), .feed-wrap td:nth-child(6) { display:none; }
+      .issue-desc { max-width:140px; -webkit-line-clamp:6; }
+      .issue-cell { min-width:120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="card">
+      <div class="top">
+        <div>
+          <h1 style="margin:0">Shiawassee Ranch Digital Log</h1>
+          <div class="muted">A central log for scheduling, maintenance tasks, property ideas, equipment updates, hunting activity, wildlife sightings, shopping needs, and general notes.</div>
+        </div>
+        <div style="display:grid; gap:8px; justify-items:end;">
+          <div id="userLabel" class="muted">Checking session...</div>
+          <button id="logoutBtn" class="danger">Log Out</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card grid">
+      <h2 style="margin:0; font-size:1.18rem;">Cabin Reservations</h2>
+      <div class="muted">Reserve days or weeks up to 12 months ahead.</div>
+      <div class="reserve-grid">
+        <div class="grid3">
+          <label>Start Date<input id="resStart" type="date" /></label>
+          <label>End Date<input id="resEnd" type="date" /></label>
+          <label>Your Name<input id="resName" placeholder="Enter your name" /></label>
+        </div>
+        <div class="split">
+          <button id="reserveBtn" class="primary">Reserve Dates</button>
+        </div>
+        <div id="reserveMsg" class="muted"></div>
+      </div>
+      <h3 style="margin:0; font-size:1.08rem;">Schedule (Reserved Dates)</h3>
+      <a id="openCalendarLink" class="calendar-link">Open pop-up calendar view</a>
+      <div class="schedule-wrap">
+        <div id="scheduleView"></div>
+      </div>
+    </section>
+
+    <dialog id="calendarModal">
+      <div class="modal-head">
+        <h3 style="margin:0; font-size:1.08rem;">Cabin Calendar (Next 12 Months)</h3>
+        <button id="closeCalendarBtn">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="calendarPopup" class="calendar-grid"></div>
+      </div>
+    </dialog>
+
+    <section class="card">
+      <div class="top">
+        <h2 style="margin:0; font-size:1.18rem;">Log Feed</h2>
+        <span id="countLabel" class="muted">0 entries</span>
+      </div>
+      <div class="feed-wrap"><div id="feed"></div></div>
+      <button id="loadMoreBtn" class="hidden" style="margin-top:10px;">Load more</button>
+    </section>
+
+    <section class="card grid">
+      <h2 id="formTitle" style="margin:0; font-size:1.18rem;">New Entry</h2>
+      <div class="grid3">
+        <label>Your Name<input id="author" placeholder="Enter your name" /></label>
+        <label>Date<input id="date" type="date" required /></label>
+        <label>Category<select id="category"></select></label>
+      </div>
+      <input id="workspaceId" type="hidden" />
+      <label>Title<input id="title" placeholder="Short summary" /></label>
+      <label>Description<textarea id="description" placeholder="Detailed notes"></textarea></label>
+      <div class="grid2">
+        <label>Tags (comma separated)<input id="tags" placeholder="tractor, north field" /></label>
+        <label>Photos (optional)<input id="photos" type="file" accept="image/*" multiple /></label>
+      </div>
+      <div class="split">
+        <button id="saveBtn" class="primary">Save</button>
+        <button id="cancelBtn" class="hidden">Cancel Edit</button>
+        <button id="deleteBtn" class="danger hidden">Delete</button>
+      </div>
+      <div id="saveMsg" class="muted"></div>
+    </section>
+
+    <details class="card search-card">
+      <summary>Log Search</summary>
+      <div class="grid search-content">
+        <div class="grid3">
+          <label>Keyword<input id="fKeyword" placeholder="title or description" /></label>
+          <label>Category<select id="fCategory"><option value="">All</option></select></label>
+          <label>Author<input id="fAuthor" placeholder="author" /></label>
+        </div>
+        <div class="grid3">
+          <label>From<input id="fFrom" type="date" /></label>
+          <label>To<input id="fTo" type="date" /></label>
+          <label>Tag<input id="fTags" placeholder="tag" /></label>
+        </div>
+        <div class="split">
+          <button id="exportBtn">Export CSV</button>
+          <button id="applyFilters" class="primary">Apply Filters</button>
+          <button id="clearFilters">Clear</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+<script>
+const SUPABASE_URL = "https://gpbusqwvjjhpwitoovkd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
+const PHOTO_BUCKET = "log-photos";
+const PAGE_SIZE = 20;
+const CATEGORIES = ["general maintenance","suggestions","equipment","hunting","wildlife","shopping list","notes"];
+const RESERVATION_KEY = "shiawassee_cabin_reservations_v1";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const state = { entries: [], filteredEntries: [], page: 0, hasMore: false, editing: null, selectedFiles: [], workspaceId: null, sortBy: "date", sortDir: "desc", reservations: [], user: null };
+const $ = (id) => document.getElementById(id);
+
+function today() { return new Date().toISOString().slice(0,10); }
+function esc(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+function setMsg(text, cls="muted") { const el=$("saveMsg"); el.className=cls; el.textContent=text; }
+function setReserveMsg(text, cls="muted") { const el=$("reserveMsg"); el.className=cls; el.textContent=text; }
+
+async function requireAuth() {
+  const { data, error } = await sb.auth.getSession();
+  if (error || !data.session?.user) {
+    window.location.href = "login.html";
+    return false;
+  }
+
+  state.user = data.session.user;
+  const label = state.user.email || "Signed in";
+  $("userLabel").textContent = `Signed in as ${label}`;
+
+  const metaName = [state.user.user_metadata?.first_name, state.user.user_metadata?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (metaName && !$("author").value.trim()) {
+    $("author").value = metaName;
+  }
+
+  return true;
+}
+
+function maxReservationDate() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 12);
+  return d.toISOString().slice(0,10);
+}
+
+function eachDateInRange(start, end) {
+  const out = [];
+  const cur = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  while (cur <= endDate) {
+    out.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+function loadReservations() {
+  try {
+    const raw = localStorage.getItem(RESERVATION_KEY);
+    state.reservations = raw ? JSON.parse(raw) : [];
+  } catch {
+    state.reservations = [];
+  }
+}
+
+function saveReservations() {
+  localStorage.setItem(RESERVATION_KEY, JSON.stringify(state.reservations));
+}
+
+function getReservationForDate(dateStr) {
+  return state.reservations.find((r) => dateStr >= r.start && dateStr <= r.end);
+}
+
+function renderSchedule() {
+  const view = $("scheduleView");
+  const sorted = [...state.reservations].sort((a, b) => a.start.localeCompare(b.start));
+  if (!sorted.length) {
+    view.innerHTML = `<div class="muted" style="padding:10px;">No reserved dates yet.</div>`;
+    return;
+  }
+  const rows = sorted.map((r) => {
+    const startLabel = new Date(`${r.start}T00:00:00`).toLocaleDateString();
+    const endLabel = new Date(`${r.end}T00:00:00`).toLocaleDateString();
+    const rangeLabel = r.start === r.end ? startLabel : `${startLabel} - ${endLabel}`;
+    return `<tr><td>${rangeLabel}</td><td class="status-reserved">Reserved</td><td>${esc(r.name)}</td></tr>`;
+  }).join("");
+  view.innerHTML = `<table><thead><tr><th>Date Range</th><th>Status</th><th>Reserved By</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderCalendarPopup() {
+  const container = $("calendarPopup");
+  const todayDate = new Date();
+  const months = [];
+  for (let i = 0; i < 12; i += 1) {
+    const d = new Date(todayDate.getFullYear(), todayDate.getMonth() + i, 1);
+    months.push(d);
+  }
+
+  const reservedMap = new Map();
+  for (const r of state.reservations) {
+    for (const d of eachDateInRange(r.start, r.end)) {
+      reservedMap.set(d, r.name);
+    }
+  }
+
+  const monthHtml = months.map((monthStart) => {
+    const y = monthStart.getFullYear();
+    const m = monthStart.getMonth();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const firstWeekday = new Date(y, m, 1).getDay();
+    const cells = [];
+    for (let i = 0; i < firstWeekday; i += 1) cells.push('<div class="day"></div>');
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const iso = new Date(y, m, day).toISOString().slice(0, 10);
+      const name = reservedMap.get(iso);
+      if (name) {
+        cells.push(`<div class="day reserved" title="Reserved by ${esc(name)}">${day}</div>`);
+      } else {
+        cells.push(`<div class="day">${day}</div>`);
+      }
+    }
+    const title = monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    return `<div class="calendar-month"><h4>${title}</h4><div class="calendar-days">${cells.join("")}</div></div>`;
+  }).join("");
+
+  container.innerHTML = monthHtml;
+}
+
+function openCalendarPopup() {
+  renderCalendarPopup();
+  $("calendarModal").showModal();
+}
+
+function closeCalendarPopup() {
+  $("calendarModal").close();
+}
+
+function reserveDates() {
+  const start = $("resStart").value;
+  const end = $("resEnd").value;
+  const name = $("resName").value.trim() || $("author").value.trim();
+
+  const min = today();
+  const max = maxReservationDate();
+
+  if (!start || !end || !name) return setReserveMsg("Start date, end date, and name are required.", "error");
+  if (start < min || end < min) return setReserveMsg("Reservations must be today or later.", "error");
+  if (start > max || end > max) return setReserveMsg("Reservations can only be made up to 12 months from today.", "error");
+  if (end < start) return setReserveMsg("End date must be on or after the start date.", "error");
+
+  const dates = eachDateInRange(start, end);
+  const conflict = dates.find((d) => getReservationForDate(d));
+  if (conflict) {
+    const existing = getReservationForDate(conflict);
+    return setReserveMsg(`Date conflict: ${conflict} is already reserved by ${existing?.name || "another user"}.`, "error");
+  }
+
+  state.reservations.push({ start, end, name });
+  state.reservations.sort((a,b) => a.start.localeCompare(b.start));
+  saveReservations();
+  renderSchedule();
+  setReserveMsg("Reservation saved.", "ok");
+  $("resName").value = "";
+}
+
+function initReservationInputs() {
+  const min = today();
+  const max = maxReservationDate();
+  $("resStart").min = min;
+  $("resEnd").min = min;
+  $("resStart").max = max;
+  $("resEnd").max = max;
+  $("resStart").value = min;
+  $("resEnd").value = min;
+}
+
+function formatPhotoUploadError(err) {
+  const message = String(err?.message || err || "Upload failed");
+  const status = Number(err?.statusCode || err?.status || 0);
+  const lower = message.toLowerCase();
+
+  if (status === 404 || (lower.includes("bucket") && lower.includes("not found"))) {
+    return `Photo upload failed: storage bucket "${PHOTO_BUCKET}" was not found. Confirm the bucket name and that it exists in this Supabase project.`;
+  }
+
+  if (status === 401 || status === 403 || lower.includes("row-level security") || lower.includes("permission") || lower.includes("not authorized")) {
+    return `Photo upload failed: storage policy blocked upload to "${PHOTO_BUCKET}". Add INSERT policy access for the anon role on storage.objects.`;
+  }
+
+  return `Photo upload failed: ${message}`;
+}
+
+function normalize(row) {
+  return {
+    id: row.id,
+    date: row.event_at ? String(row.event_at).slice(0,10) : (row.created_at ? String(row.created_at).slice(0,10) : today()),
+    category: row.entry_type || "notes",
+    title: row.title || "",
+    description: row.body || "",
+    tags: row.tags || [],
+    photos: row.photo_urls || [],
+    author: row.author || "Unknown",
+    created_at: row.created_at || row.event_at || new Date().toISOString(),
+    workspace_id: row.workspace_id || null
+  };
+}
+
+function toPayload() {
+  const date = $("date").value || today();
+  return {
+    title: $("title").value.trim(),
+    body: $("description").value.trim(),
+    tags: $("tags").value.split(",").map((x) => x.trim()).filter(Boolean),
+    author: $("author").value.trim() || "Unknown",
+    workspace_id: $("workspaceId").value.trim() || null,
+    entry_type: $("category").value,
+    event_at: `${date}T12:00:00.000Z`,
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function uploadPhotos(files) {
+  const urls = [];
+  for (const file of files) {
+    const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+    const path = `public/${today()}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data } = sb.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+async function resolveWorkspaceId() {
+  if (state.workspaceId) return state.workspaceId;
+
+  const { data: noteRows } = await sb.from("notes").select("workspace_id").not("workspace_id", "is", null).limit(500);
+  const numericIds = (noteRows || [])
+    .map((row) => Number.parseInt(String(row.workspace_id), 10))
+    .filter((value) => Number.isFinite(value));
+
+  if (numericIds.length) {
+    const nextWorkspaceId = String(Math.max(...numericIds) + 1);
+    state.workspaceId = nextWorkspaceId;
+    $("workspaceId").value = nextWorkspaceId;
+    return nextWorkspaceId;
+  }
+
+  const initialWorkspaceId = "1";
+  state.workspaceId = initialWorkspaceId;
+  $("workspaceId").value = initialWorkspaceId;
+  return initialWorkspaceId;
+}
+
+function matchesFilters(e) {
+  const kw = $("fKeyword").value.trim().toLowerCase();
+  const cat = $("fCategory").value;
+  const author = $("fAuthor").value.trim().toLowerCase();
+  const from = $("fFrom").value;
+  const to = $("fTo").value;
+  const tag = $("fTags").value.trim().toLowerCase();
+  if (cat && e.category !== cat) return false;
+  if (author && !e.author.toLowerCase().includes(author)) return false;
+  if (from && e.date < from) return false;
+  if (to && e.date > to) return false;
+  if (tag && !(e.tags || []).some((t) => String(t).toLowerCase().includes(tag))) return false;
+  if (kw && !`${e.title} ${e.description}`.toLowerCase().includes(kw)) return false;
+  return true;
+}
+
+function sortEntries(entries) {
+  const dir = state.sortDir === "asc" ? 1 : -1;
+  return [...entries].sort((a, b) => {
+    const getVal = (row) => {
+      if (state.sortBy === "date") return row.date || "";
+      if (state.sortBy === "category") return row.category || "";
+      if (state.sortBy === "title") return row.title || "";
+      if (state.sortBy === "author") return row.author || "";
+      if (state.sortBy === "created_at") return row.created_at || "";
+      return "";
+    };
+    const va = getVal(a);
+    const vb = getVal(b);
+    return String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: "base" }) * dir;
+  });
+}
+
+function toggleSort(key) {
+  if (state.sortBy === key) {
+    state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+  } else {
+    state.sortBy = key;
+    state.sortDir = key === "date" || key === "created_at" ? "desc" : "asc";
+  }
+  state.page = 0;
+  applyView();
+}
+
+function applyView() {
+  const sorted = sortEntries(state.filteredEntries);
+  const limit = (state.page + 1) * PAGE_SIZE;
+  state.hasMore = sorted.length > limit;
+  state.entries = sorted.slice(0, limit);
+  renderFeed();
+}
+
+function exportCsv() {
+  const headers = ["Date", "Category", "Title", "Description", "Author", "Tags", "Created At"];
+  const rows = state.filteredEntries.map((e) => [
+    e.date,
+    e.category,
+    e.title,
+    e.description,
+    e.author,
+    (e.tags || []).join("|"),
+    e.created_at
+  ]);
+  const csv = [headers, ...rows]
+    .map((row) => row.map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `shiawassee-log-${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function renderFeed() {
+  const feed = $("feed");
+  feed.innerHTML = "";
+  $("countLabel").textContent = `${state.entries.length} entries`;
+  if (!state.entries.length) {
+    feed.innerHTML = `<div class="muted" style="padding:10px;">No entries found.</div>`;
+    return;
+  }
+
+  const dirSymbol = state.sortDir === "asc" ? "▲" : "▼";
+  const hdr = (key, label) => `<button data-sort="${key}">${label} ${state.sortBy === key ? dirSymbol : ""}</button>`;
+  const rows = state.entries.map((e) => {
+    const tags = (e.tags || []).map((t) => `<span class="chip">#${esc(t)}</span>`).join("");
+    const photos = (e.photos || []).map((p) => `<a href="${esc(p)}" target="_blank" rel="noreferrer"><img src="${esc(p)}" alt="photo" class="thumb" /></a>`).join("");
+    return `
+      <tr>
+        <td>${esc(e.date)}</td>
+        <td>${esc(e.category)}</td>
+        <td class="issue-cell"><div class="issue-title">${esc(e.title)}</div><div class="muted issue-desc">${esc(e.description)}</div></td>
+        <td>${esc(e.author)}</td>
+        <td>${tags}</td>
+        <td><div class="thumb-list">${photos}</div></td>
+        <td><button class="tiny-btn" data-edit="${e.id}">Edit</button> <button class="tiny-btn danger" data-delete="${e.id}">Delete</button></td>
+      </tr>`;
+  }).join("");
+
+  feed.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>${hdr("date", "Date")}</th>
+          <th>${hdr("category", "Category")}</th>
+          <th>${hdr("title", "Issue")}</th>
+          <th>${hdr("author", "User")}</th>
+          <th>Tags</th>
+          <th>Photos</th>
+          <th>${hdr("created_at", "Created")}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  feed.querySelectorAll("button[data-sort]").forEach((b) => b.onclick = () => toggleSort(b.dataset.sort));
+  feed.querySelectorAll("button[data-edit]").forEach((b) => b.onclick = () => startEdit(b.dataset.edit));
+  feed.querySelectorAll("button[data-delete]").forEach((b) => b.onclick = () => quickDelete(b.dataset.delete));
+  $("loadMoreBtn").classList.toggle("hidden", !state.hasMore);
+}
+
+async function loadEntries() {
+  const { data, error } = await sb.from("notes").select("*").order("event_at", { ascending:false }).order("created_at", { ascending:false }).limit(500);
+  if (error) return setMsg(`Load failed: ${error.message}`, "error");
+
+  const normalized = (data || []).map(normalize);
+  const numericWorkspaceIds = normalized
+    .map((row) => Number.parseInt(String(row.workspace_id || ""), 10))
+    .filter((value) => Number.isFinite(value));
+
+  if (numericWorkspaceIds.length) {
+    state.workspaceId = String(Math.max(...numericWorkspaceIds) + 1);
+  }
+  if (!state.workspaceId) state.workspaceId = "1";
+  $("workspaceId").value = state.workspaceId;
+
+  state.filteredEntries = normalized.filter(matchesFilters);
+  applyView();
+}
+
+function resetForm() {
+  state.editing = null;
+  state.selectedFiles = [];
+  $("formTitle").textContent = "New Entry";
+  ["title","description","tags","photos"].forEach((id) => $(id).value = "");
+  $("deleteBtn").classList.add("hidden");
+  $("cancelBtn").classList.add("hidden");
+
+  if (state.user?.user_metadata) {
+    const metaName = [state.user.user_metadata.first_name, state.user.user_metadata.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (metaName) $("author").value = metaName;
+  }
+
+  setMsg("");
+}
+
+function startEdit(id) {
+  const e = state.entries.find((x) => x.id === id);
+  if (!e) return;
+  state.editing = e;
+  $("formTitle").textContent = "Edit Entry";
+  $("author").value = e.author;
+  $("workspaceId").value = state.workspaceId || "1";
+  $("date").value = e.date;
+  $("category").value = e.category;
+  $("title").value = e.title;
+  $("description").value = e.description;
+  $("tags").value = (e.tags || []).join(", ");
+  $("photos").value = "";
+  state.selectedFiles = [];
+  $("deleteBtn").classList.remove("hidden");
+  $("cancelBtn").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function quickDelete(id) {
+  if (!confirm("Delete this entry?")) return;
+  const { error } = await sb.from("notes").delete().eq("id", id);
+  if (error) return setMsg(error.message, "error");
+  if (state.editing?.id === id) resetForm();
+  await loadEntries();
+}
+
+async function saveEntry() {
+  const payload = toPayload();
+  if (!payload.title || !payload.body || !payload.entry_type || !payload.author) return setMsg("Name, category, title, and description are required.", "error");
+
+  setMsg("Saving...");
+  let error;
+
+  try {
+    const uploaded = state.selectedFiles.length ? await uploadPhotos(state.selectedFiles) : [];
+    payload.photo_urls = [...(state.editing?.photos || []), ...uploaded];
+  } catch (e) {
+    return setMsg(formatPhotoUploadError(e), "error");
+  }
+
+  if (state.editing?.id) {
+    ({ error } = await sb.from("notes").update(payload).eq("id", state.editing.id));
+  } else {
+    payload.id = crypto.randomUUID();
+    try {
+      payload.workspace_id = payload.workspace_id || await resolveWorkspaceId();
+    } catch (workspaceErr) {
+      return setMsg(workspaceErr.message || String(workspaceErr), "error");
+    }
+    ({ error } = await sb.from("notes").insert(payload));
+  }
+
+  if (error) return setMsg(error.message, "error");
+
+  setMsg("Saved.", "ok");
+  resetForm();
+  state.page = 0;
+  await loadEntries();
+}
+
+function initCategoryOptions() {
+  const sortedCategories = [...CATEGORIES].sort((a, b) => a.localeCompare(b));
+  const opts = sortedCategories.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  $("category").innerHTML = opts;
+  $("fCategory").innerHTML = `<option value="">All</option>${opts}`;
+}
+
+(function init() {
+  initCategoryOptions();
+  $("date").value = today();
+
+  $("saveBtn").onclick = saveEntry;
+  $("photos").onchange = () => {
+    state.selectedFiles = Array.from($("photos").files || []);
+  };
+  $("cancelBtn").onclick = resetForm;
+  $("deleteBtn").onclick = () => state.editing?.id && quickDelete(state.editing.id);
+  $("applyFilters").onclick = async () => { state.page = 0; await loadEntries(); };
+  $("clearFilters").onclick = async () => {
+    ["fKeyword","fCategory","fAuthor","fFrom","fTo","fTags"].forEach((id) => $(id).value = "");
+    state.page = 0;
+    await loadEntries();
+  };
+  $("loadMoreBtn").onclick = () => { state.page += 1; applyView(); };
+  $("exportBtn").onclick = exportCsv;
+  $("reserveBtn").onclick = reserveDates;
+  $("openCalendarLink").onclick = (e) => { e.preventDefault(); openCalendarPopup(); };
+  $("closeCalendarBtn").onclick = closeCalendarPopup;
+
+  $("logoutBtn").onclick = async () => {
+    await sb.auth.signOut();
+    window.location.href = "login.html";
+  };
+
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT" || !session) {
+      window.location.href = "login.html";
+    }
+  });
+
+  (async () => {
+    const ok = await requireAuth();
+    if (!ok) return;
+
+    loadReservations();
+    initReservationInputs();
+    renderSchedule();
+    await loadEntries();
+  })();
+})();
+</script>
+</body>
+</html>
