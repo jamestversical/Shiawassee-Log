@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,185 +7,576 @@
   <title>Shiawassee Ranch Digital Log</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root { --bg:#eef3f8; --bg-soft:#e4ecf6; --card:#ffffff; --line:#d3deea; --text:#0f2741; --muted:#5f7287; --accent:#00a7e1; --danger:#c23b3b; --head:#e9f1fa; --shadow:0 12px 30px rgba(16,40,69,.10); }
+    :root {
+      --paper:#f2efe7;
+      --paper-dark:#e5e0d5;
+      --ink:#2f342f;
+      --muted:#76756d;
+      --line:#cec8bb;
+      --card:#f8f6f0;
+      --brand:#6b874f;
+      --brand-dark:#4f6739;
+      --top:#222622;
+      --top-2:#313730;
+      --warn:#a4783d;
+      --teal:#60746c;
+      --shadow:0 10px 26px rgba(45,40,29,.10);
+    }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:Calibri, "Segoe UI", Arial, sans-serif; color:var(--text); background:linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 48%); }
-    .container { max-width:1000px; margin:0 auto; padding:14px; display:grid; gap:10px; }
-    h1, h2, h3, summary { font-family:Calibri, "Segoe UI", Arial, sans-serif; letter-spacing:.01em; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); }
-    .grid { display:grid; gap:10px; }
-    .grid2 { display:grid; gap:10px; grid-template-columns:1fr; }
-    .grid3 { display:grid; gap:10px; grid-template-columns:1fr; }
-    @media (min-width:760px){ .grid2{grid-template-columns:1fr 1fr;} .grid3{grid-template-columns:repeat(3,1fr);} }
+    body {
+      margin:0;
+      font-family:Inter,"Segoe UI",Arial,sans-serif;
+      color:var(--ink);
+      line-height:1.4;
+      background:radial-gradient(circle at 20% 0%, rgba(255,255,255,.4), transparent 55%), linear-gradient(180deg, var(--paper-dark), var(--paper));
+    }
+    .masthead {
+      background:linear-gradient(90deg, var(--top), var(--top-2), var(--top));
+      border-bottom:2px solid var(--brand);
+      color:#f4f0e6;
+      padding:14px 0 0;
+    }
+    .bar, .tabs { max-width:1140px; margin:0 auto; padding:0 16px; }
+    .bar { display:flex; justify-content:space-between; align-items:center; gap:14px; padding-bottom:12px; }
+    .brand-wrap { display:flex; align-items:center; gap:12px; }
+    .logo-badge { width:56px; height:56px; border-radius:14px; border:3px solid #f2f2eb; background:linear-gradient(180deg,#3b4f45,#24342d); color:#fff; display:grid; place-items:center; font-size:1.7rem; box-shadow:inset 0 0 0 2px rgba(255,255,255,.2); overflow:hidden; }
+    .brand-title { margin:0; font-size:2rem; font-family:Georgia,"Times New Roman",serif; }
+    .brand-sub { color:#b5b3aa; font-size:.95rem; letter-spacing:.03em; }
+    .tabs { display:flex; gap:12px; }
+    .tabs { overflow:auto; white-space:nowrap; }
+    .tab-btn {
+      border:none; background:transparent; color:#b6b3a8; font:600 1.05rem Inter,"Segoe UI",Arial,sans-serif;
+      padding:10px 16px; border-bottom:3px solid transparent; cursor:pointer;
+    }
+    .tab-btn.active { color:#d9e5c4; border-bottom-color:var(--brand); }
+    .user-controls{display:flex;align-items:center;gap:10px;}
+    .pill{padding:8px 14px;border:1px solid rgba(177,204,132,.35);border-radius:10px;background:rgba(109,136,75,.35);color:#dbe9c6;font-weight:700;}
+    .logout{padding:8px 14px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:transparent;color:#d6d2c7;cursor:pointer;}
+
+    .container { max-width:1140px; margin:0 auto; padding:18px 16px 30px; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+    .grid2 { display:grid; grid-template-columns:1fr; gap:14px; }
+    .overview-grid { grid-template-columns:1fr; }
+    .grid3 { display:grid; grid-template-columns:1fr; gap:14px; }
+    .doc-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+    .doc-row:first-child { border-top:none; }
+    .doc-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .doc-name { font-weight:600; word-break:break-word; }
+    .doc-actions { display:flex; gap:8px; align-items:center; }
+    @media (min-width:900px){ .grid2{grid-template-columns:1fr 1fr;} .grid3{grid-template-columns:repeat(3,1fr);} .overview-grid{grid-template-columns:repeat(2,minmax(320px,1fr));} }
+    @media (min-width:1300px){ .overview-grid{grid-template-columns:repeat(3,minmax(300px,1fr));} }
+    @media (max-width:700px){ .bar{flex-direction:column;align-items:flex-start;gap:10px;} .user-controls{width:100%;justify-content:space-between;} .brand-title{font-size:1.3rem;} .logo-badge{width:44px;height:44px;} .tab-btn{padding:10px 10px;font-size:.95rem;} .container{padding:12px 10px 20px;} .card{padding:14px;} .split>*{min-width:100px;} table{font-size:.9rem;} }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow); }
+    .head { font-size:1rem; text-transform:uppercase; letter-spacing:.09em; color:#787467; margin:0 0 10px; font-weight:700; }
     input, select, textarea, button { font:inherit; }
-    input, select, textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; background:#fff; }
+    input, select, textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; background:#fff; color:var(--ink); }
     textarea { min-height:110px; resize:vertical; }
-    button { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; cursor:pointer; transition:.16s ease; }
-    button:hover { transform:translateY(-1px); }
-    .primary { background:var(--accent); color:#fff; border-color:var(--accent); }
-    .danger { background:var(--danger); color:#fff; border-color:var(--danger); }
+    button { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#f4f2eb; color:var(--ink); cursor:pointer; }
+    .primary { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:700; }
+    .danger { background:var(--warn); border-color:var(--warn); color:#fff; }
     .split { display:flex; flex-wrap:wrap; gap:8px; }
     .split > * { flex:1; min-width:130px; }
-    .muted { color:var(--muted); font-size:.9rem; }
-    .error { color:var(--danger); }
-    .ok { color:var(--accent); }
+    .muted { color:var(--muted); font-size:.95rem; }
+    .error { color:#b4423a; }
+    .ok { color:#3f7a51; }
     .hidden { display:none !important; }
-    .feed-wrap { border:1px solid var(--line); border-radius:12px; overflow:auto; max-height:460px; }
-    table { width:100%; border-collapse:collapse; font-size:.9rem; }
-    th, td { border-bottom:1px solid var(--line); padding:8px; vertical-align:top; text-align:left; }
-    th { position:sticky; top:0; background:var(--head); z-index:1; white-space:nowrap; }
-    th button { border:none; background:transparent; padding:0; cursor:pointer; color:var(--text); font-weight:600; }
-    .chip { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:3px 8px; margin:2px 4px 2px 0; font-size:.8rem; }
-    .top { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
-    .thumb { width:44px; height:44px; object-fit:cover; border:1px solid var(--line); border-radius:6px; display:block; }
+    .feed-wrap, .schedule-wrap { border:1px solid var(--line); border-radius:12px; overflow:auto; }
+    .feed-wrap { max-height:460px; }
+    .schedule-wrap { max-height:420px; }
+    table { width:100%; border-collapse:collapse; font-size:.95rem; }
+    th, td { border-bottom:1px solid var(--line); padding:10px; text-align:left; }
+    th { background:#efede6; position:sticky; top:0; }
+    .chip { display:inline-block; border:1px solid #c9c2b6; border-radius:999px; padding:2px 9px; margin:2px 4px 2px 0; font-size:.8rem; }
+    .top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    .thumb { width:44px; height:44px; object-fit:cover; border:1px solid var(--line); border-radius:6px; }
     .thumb-list { display:flex; gap:6px; flex-wrap:wrap; }
-    .tiny-btn { font-size:.8rem; padding:5px 8px; min-width:auto; }
-    .reserve-grid { display:grid; gap:10px; grid-template-columns:1fr; }
-    .schedule-wrap { border:1px solid var(--line); border-radius:12px; overflow:auto; max-height:320px; }
-    .status-reserved { color:var(--danger); font-weight:600; }
-    .calendar-link { color:var(--accent); text-decoration:underline; cursor:pointer; width:max-content; }
-    dialog { border:1px solid var(--line); border-radius:10px; padding:0; max-width:900px; width:95%; }
+    .tiny-btn { font-size:.85rem; padding:6px 10px; }
+    .calendar-link { color:var(--brand-dark); text-decoration:underline; cursor:pointer; }
+    dialog { border:1px solid var(--line); border-radius:12px; max-width:980px; width:95%; padding:0; background:var(--card); }
     .modal-head { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); }
-    .modal-body { padding:12px 14px; max-height:70vh; overflow:auto; }
+    .modal-body { padding:12px 14px; max-height:72vh; overflow:auto; }
     .calendar-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .calendar-month { border:1px solid var(--line); border-radius:8px; padding:8px; }
-    .calendar-month h4 { margin:0 0 6px; font-size:.95rem; }
     .calendar-days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:.75rem; }
-    .day { padding:4px; text-align:center; border-radius:6px; border:1px solid transparent; }
-    .day.reserved { border-color:var(--danger); background:#fde8e8; }
-    .search-card { padding:10px 12px; }
-    .search-card summary { cursor:pointer; font-weight:700; font-size:1.08rem; list-style:none; }
-    .search-card summary::-webkit-details-marker { display:none; }
-    .search-card summary::after { content:"▾"; float:right; color:var(--muted); }
-    .search-card[open] summary::after { content:"▴"; }
-    .search-content { margin-top:10px; }
-    .issue-title { font-weight:700; }
-    .issue-desc { overflow-wrap:anywhere; word-break:break-word; max-width:280px; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
-    @media (max-width:700px){
-      .feed-wrap table { font-size:.82rem; }
-      .feed-wrap th, .feed-wrap td { padding:6px; }
-      .feed-wrap th:nth-child(5), .feed-wrap td:nth-child(5),
-      .feed-wrap th:nth-child(6), .feed-wrap td:nth-child(6) { display:none; }
-      .issue-desc { max-width:140px; -webkit-line-clamp:6; }
-      .issue-cell { min-width:120px; }
-    }
+    .day { padding:4px; text-align:center; border-radius:6px; }
+    .day.reserved { background:#778a67; color:#fff; }
+    .summary-kpi { font-size:2rem; margin:4px 0; }
+    .mini-list { display:grid; gap:10px; }
+    .mini-item { border-top:1px solid var(--line); padding-top:10px; }
+    .footer-note { text-align:center; margin:22px 0 4px; color:#b1ac9e; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <section class="card">
-      <div class="top">
+  <header class="masthead">
+    <div class="bar">
+      <div class="brand-wrap">
+        <div class="logo-badge">🦌</div>
         <div>
-          <h1 style="margin:0">Shiawassee Ranch Digital Log</h1>
-          <div class="muted">A central log for scheduling, maintenance tasks, property ideas, equipment updates, hunting activity, wildlife sightings, shopping needs, and general notes.</div>
+          <h1 class="brand-title">Shiawassee Ranch Est. 1965</h1>
+          <div class="brand-sub">CURRAN, MICHIGAN</div>
         </div>
-        <div style="display:grid; gap:8px; justify-items:end;">
-          <div id="userLabel" class="muted">Checking session...</div>
-          <button id="logoutBtn" class="danger">Log Out</button>
-        </div>
+      </div>
+      <div class="user-controls">
+        <div id="userLabel" class="pill">Checking session...</div>
+        <button id="logoutBtn" class="logout">Log Out</button>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="schedule">Schedule</button>
+      <button class="tab-btn" data-tab="activity">Activity Feed</button>
+      <button class="tab-btn" data-tab="requests">Requests</button>
+      <button class="tab-btn" data-tab="property">Property</button>
+      <button class="tab-btn" data-tab="documents">Documents</button>
+      <button id="adminTabBtn" class="tab-btn hidden" data-tab="admin">Admin</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="tab-panel active" data-panel="overview">
+      <div class="grid2 overview-grid">
+        <article class="card">
+          <h2 class="head">Current Conditions — Curran, MI</h2>
+          <div id="currentWeatherValue" class="summary-kpi">--°F</div>
+          <div id="currentWeatherMeta" class="muted">Loading current weather...</div>
+        </article>
+        <article class="card">
+          <h2 class="head">Next Visit</h2>
+          <div id="overviewNextVisit" style="font-size:1.4rem;font-weight:700;">No upcoming reservation</div>
+          <div id="overviewNextDates" class="muted" style="margin-top:4px;"></div>
+          <h3 class="head" style="margin-top:18px;">Upcoming Reservations</h3>
+          <div id="overviewUpcoming" class="mini-list"></div>
+        </article>
+        <article class="card">
+          <div class="top"><h2 class="head" style="margin:0;">Open Activity Items</h2><span id="overviewActivityIssueCount" class="muted">0 items</span></div>
+          <div class="schedule-wrap"><div id="overviewActivityIssues"></div></div>
+        </article>
+        <article class="card">
+          <div class="top"><h2 class="head" style="margin:0;">Open Requests</h2><span id="overviewRequestCount" class="muted">0 items</span></div>
+          <div class="schedule-wrap"><div id="overviewRequests"></div></div>
+        </article>
+        <article class="card">
+          <div class="top"><h2 class="head" style="margin:0;">7-Day Forecast</h2><span class="muted">Curran, MI</span></div>
+          <div id="overviewForecast" class="grid3"></div>
+          <div id="tripForecastNote" class="muted" style="margin-top:10px;"></div>
+        </article>
+        <article class="card">
+          <h2 class="head">Property at a Glance</h2>
+          <div class="grid2">
+            <div class="card" style="padding:12px;"><div class="head" style="font-size:.9rem;">Well</div><div style="font-size:2rem;color:#587d4a;font-weight:700;">OK</div><div class="muted">42 PSI</div></div>
+            <div class="card" style="padding:12px;"><div class="head" style="font-size:.9rem;">Cameras</div><div style="font-size:2rem;color:#866c3d;font-weight:700;">4/4</div><div class="muted">All online</div></div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="top"><h2 class="head" style="margin:0;">MI DNR Hunting Seasons (Curran area)</h2><a href="https://www.michigan.gov/dnr/things-to-do/hunting/hunting-season-calendar" target="_blank" rel="noreferrer" class="calendar-link">Source</a></div>
+          <div class="muted" style="margin-top:8px;"><strong>In season:</strong> <span id="seasonCurrent">Loading…</span></div>
+          <div class="muted" style="margin-top:6px;"><strong>Upcoming (30 days):</strong> <span id="seasonUpcoming">Loading…</span></div>
+        </article>
       </div>
     </section>
 
-    <section class="card grid">
-      <h2 style="margin:0; font-size:1.18rem;">Cabin Reservations</h2>
-      <div class="muted">Reserve days or weeks up to 12 months ahead.</div>
-      <div class="reserve-grid">
+    <section class="tab-panel" data-panel="schedule">
+      <section class="card">
+        <h2 class="head">Cabin Schedule</h2>
+        <a id="openCalendarLink" class="calendar-link">Open full calendar view</a>
+        <div class="schedule-wrap" style="margin-top:8px;"><div id="scheduleView"></div></div>
+      </section>
+
+      <section class="card" style="margin-top:14px;">
+        <h3 class="head">Reserve Dates</h3>
         <div class="grid3">
           <label>Start Date<input id="resStart" type="date" /></label>
           <label>End Date<input id="resEnd" type="date" /></label>
           <label>Your Name<input id="resName" placeholder="Enter your name" /></label>
         </div>
-        <div class="split">
-          <button id="reserveBtn" class="primary">Reserve Dates</button>
+        <div class="split" style="margin-top:10px;"><button id="reserveBtn" class="primary">Reserve Dates</button></div>
+        <div id="reserveMsg" class="muted" style="margin-top:8px;"></div>
+      </section>
+    </section>
+
+    <section class="tab-panel" data-panel="log">
+      <section class="card">
+        <div class="top"><h2 class="head" style="margin:0;">Activity Feed</h2><span id="countLabel" class="muted">0 entries</span></div>
+        <div class="split" style="margin-bottom:8px;">
+          <button id="logFilterAll">All</button>
+          <button id="logFilterOpen">Open</button>
+          <button id="logFilterResolved">Resolved</button>
         </div>
-        <div id="reserveMsg" class="muted"></div>
-      </div>
-      <h3 style="margin:0; font-size:1.08rem;">Schedule (Reserved Dates)</h3>
-      <a id="openCalendarLink" class="calendar-link">Open pop-up calendar view</a>
-      <div class="schedule-wrap">
-        <div id="scheduleView"></div>
-      </div>
-    </section>
+        <div class="feed-wrap"><div id="feed"></div></div>
+        <button id="loadMoreBtn" class="hidden" style="margin-top:10px;">Load more</button>
+      </section>
 
-    <dialog id="calendarModal">
-      <div class="modal-head">
-        <h3 style="margin:0; font-size:1.08rem;">Cabin Calendar (Next 12 Months)</h3>
-        <button id="closeCalendarBtn">Close</button>
-      </div>
-      <div class="modal-body">
-        <div id="calendarPopup" class="calendar-grid"></div>
-      </div>
-    </dialog>
+      <section class="card" style="margin-top:14px;">
+        <h2 id="formTitle" class="head">New Entry</h2>
+        <div class="grid3">
+          <label>Your Name<input id="author" placeholder="Enter your name" /></label>
+          <label>Date<input id="date" type="date" required /></label>
+          <label>Category<select id="category"></select></label>
+        </div>
+        <label>Status<select id="status"><option value="open">Open</option><option value="resolved">Resolved</option></select></label>
+        <input id="workspaceId" type="hidden" />
+        <label>Title<input id="title" placeholder="Short summary" /></label>
+        <label>Description<textarea id="description" placeholder="Detailed notes"></textarea></label>
+        <div class="grid2">
+          <label>Photos (optional)<input id="photos" type="file" accept="image/*" multiple /></label>
+        </div>
+        <div class="split">
+          <button id="saveBtn" class="primary">Save</button>
+          <button id="cancelBtn" class="hidden">Cancel Edit</button>
+          <button id="deleteBtn" class="danger hidden">Delete</button>
+        </div>
+        <div id="saveMsg" class="muted"></div>
+      </section>
 
-    <section class="card">
-      <div class="top">
-        <h2 style="margin:0; font-size:1.18rem;">Log Feed</h2>
-        <span id="countLabel" class="muted">0 entries</span>
-      </div>
-      <div class="feed-wrap"><div id="feed"></div></div>
-      <button id="loadMoreBtn" class="hidden" style="margin-top:10px;">Load more</button>
-    </section>
-
-    <section class="card grid">
-      <h2 id="formTitle" style="margin:0; font-size:1.18rem;">New Entry</h2>
-      <div class="grid3">
-        <label>Your Name<input id="author" placeholder="Enter your name" /></label>
-        <label>Date<input id="date" type="date" required /></label>
-        <label>Category<select id="category"></select></label>
-      </div>
-      <input id="workspaceId" type="hidden" />
-      <label>Title<input id="title" placeholder="Short summary" /></label>
-      <label>Description<textarea id="description" placeholder="Detailed notes"></textarea></label>
-      <div class="grid2">
-        <label>Tags (comma separated)<input id="tags" placeholder="tractor, north field" /></label>
-        <label>Photos (optional)<input id="photos" type="file" accept="image/*" multiple /></label>
-      </div>
-      <div class="split">
-        <button id="saveBtn" class="primary">Save</button>
-        <button id="cancelBtn" class="hidden">Cancel Edit</button>
-        <button id="deleteBtn" class="danger hidden">Delete</button>
-      </div>
-      <div id="saveMsg" class="muted"></div>
-    </section>
-
-    <details class="card search-card">
-      <summary>Log Search</summary>
-      <div class="grid search-content">
+      <details class="card" style="margin-top:14px;">
+        <summary class="head" style="cursor:pointer;">Log Search</summary>
         <div class="grid3">
           <label>Keyword<input id="fKeyword" placeholder="title or description" /></label>
           <label>Category<select id="fCategory"><option value="">All</option></select></label>
           <label>Author<input id="fAuthor" placeholder="author" /></label>
         </div>
-        <div class="grid3">
+        <div class="grid3" style="margin-top:10px;">
           <label>From<input id="fFrom" type="date" /></label>
           <label>To<input id="fTo" type="date" /></label>
-          <label>Tag<input id="fTags" placeholder="tag" /></label>
         </div>
-        <div class="split">
+        <div class="split" style="margin-top:10px;">
           <button id="exportBtn">Export CSV</button>
           <button id="applyFilters" class="primary">Apply Filters</button>
           <button id="clearFilters">Clear</button>
         </div>
+      </details>
+    </section>
+
+    <section class="tab-panel" data-panel="requests">
+      <section class="card">
+        <div class="top">
+          <h2 class="head" style="margin:0;">Open Requests (<span id="openRequestCount">0</span>)</h2>
+          <button id="newRequestBtn">+ New Request</button>
+        </div>
+        <div id="newRequestForm" class="grid3 hidden" style="margin-bottom:10px;">
+          <label>Request<input id="requestTitle" placeholder="What needs to be done?" /></label>
+          <label>Requested By<input id="requestOwner" placeholder="Name" /></label>
+          <div style="display:flex;align-items:flex-end;"><button id="saveRequestBtn" class="primary">Save Request</button></div>
+        </div>
+        <div class="schedule-wrap"><div id="openRequestsList"></div></div>
+      </section>
+      <section class="card" style="margin-top:14px;">
+        <h2 class="head">Completed (<span id="completedRequestCount">0</span>)</h2>
+        <div class="schedule-wrap"><div id="completedRequestsList"></div></div>
+      </section>
+    </section>
+
+    <section class="tab-panel" data-panel="property">
+      <div class="grid2">
+        <section class="card"><h2 class="head">Security Cameras</h2><div class="muted">Camera health and snapshots will appear here.</div></section>
+        <section class="card"><h2 class="head">Well & Water</h2><div style="font-size:2rem;color:#587d4a;font-weight:700;">Online</div><div class="muted">Pressure: 42 PSI — normal range</div></section>
       </div>
-    </details>
-  </div>
+    </section>
+
+    <section class="tab-panel" data-panel="documents">
+      <section class="card">
+        <div class="top"><h2 class="head" style="margin:0;">Documents</h2><span class="muted">Upload / Download (Max 20MB)</span></div>
+        <div class="grid3" style="margin-top:8px;">
+          <label>Choose File<input id="docFile" type="file" /></label>
+          <div style="display:flex;align-items:flex-end;"><button id="uploadDocBtn" class="primary">Upload File</button></div>
+        </div>
+        <div id="docMsg" class="muted" style="margin-top:8px;"></div>
+        <div class="schedule-wrap" style="margin-top:10px;"><div id="documentsList"></div></div>
+      </section>
+    </section>
+
+    <section id="adminPanel" class="tab-panel" data-panel="admin">
+      <section class="card">
+        <h2 class="head">Admin</h2>
+        <div class="grid3">
+          <label>Email<input id="adminEmail" type="email" placeholder="user@email.com"></label>
+          <label>Role
+            <select id="adminRole">
+              <option value="viewer">Viewer</option>
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+          </label>
+          <div style="display:flex;align-items:flex-end;"><button id="addAdminUserBtn" class="primary">Add / Update User</button></div>
+        </div>
+        <div class="schedule-wrap" style="margin-top:10px;"><div id="adminUsersTable"></div></div>
+        <div id="adminMsg" class="muted" style="margin-top:8px;">Super Admin users cannot be removed.</div>
+      </section>
+    </section>
+
+    <div class="footer-note">Shiawassee Ranch LLC · Curran, MI · Est. 1965</div>
+  </main>
+
+  <dialog id="calendarModal">
+    <div class="modal-head">
+      <h3 style="margin:0; font-size:1.08rem;">Cabin Calendar (Next 12 Months)</h3>
+      <button id="closeCalendarBtn">Close</button>
+    </div>
+    <div class="modal-body"><div id="calendarPopup" class="calendar-grid"></div></div>
+  </dialog>
 
 <script>
 const SUPABASE_URL = "https://gpbusqwvjjhpwitoovkd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
 const PHOTO_BUCKET = "log-photos";
+const DOCS_BUCKET = "documents";
+const MAX_DOC_SIZE_BYTES = 20 * 1024 * 1024;
 const PAGE_SIZE = 20;
 const CATEGORIES = ["general maintenance","suggestions","equipment","hunting","wildlife","shopping list","notes"];
 const RESERVATION_KEY = "shiawassee_cabin_reservations_v1";
+const REQUESTS_KEY = "shiawassee_requests_v1";
+const ACTIVITY_LOCAL_KEY = "shiawassee_activity_local_v1";
+const LAT = 44.74;
+const LON = -83.77;
+const ADMIN_EMAILS = ["admin@shiawasseeranch.com"];
+const SUPER_ADMIN_EMAILS = ["james.t.versical@gmail.com"];
+const ADMIN_USERS_KEY = "shiawassee_admin_users_v1";
+const ACTIVITY_TABLE = "activity_feed";
+const ADMIN_TABLE = "app_users";
+const MI_DNR_SEASONS = [
+  { name: "Rabbit/Hare", start: "09-15", end: "03-31" },
+  { name: "Squirrel", start: "09-15", end: "03-31" },
+  { name: "Whitetail Deer (Archery)", start: "10-01", end: "11-14" },
+  { name: "Whitetail Deer (Firearm)", start: "11-15", end: "11-30" },
+  { name: "Whitetail Deer (Late Archery)", start: "12-01", end: "01-01" },
+  { name: "Spring Turkey", start: "04-20", end: "05-31" },
+  { name: "Fall Turkey", start: "09-15", end: "11-14" },
+  { name: "Waterfowl (regular)", start: "10-01", end: "12-31" }
+];
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const state = { entries: [], filteredEntries: [], page: 0, hasMore: false, editing: null, selectedFiles: [], workspaceId: null, sortBy: "date", sortDir: "desc", reservations: [], user: null };
+const state = { entries: [], activityEntriesAll: [], filteredEntries: [], page: 0, hasMore: false, editing: null, selectedFiles: [], workspaceId: null, sortBy: "date", sortDir: "desc", reservations: [], user: null, requests: [], weather: null, currentWeather: null, logStatusFilter: "all", isAdmin: false, adminUsers: [], activityHasUserId: null, activityColumns: null, activityIdColumn: "id", feedMode: "activity" };
 const $ = (id) => document.getElementById(id);
+let activeTab = "overview";
 
 function today() { return new Date().toISOString().slice(0,10); }
 function esc(s) { return String(s || "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
 function setMsg(text, cls="muted") { const el=$("saveMsg"); el.className=cls; el.textContent=text; }
 function setReserveMsg(text, cls="muted") { const el=$("reserveMsg"); el.className=cls; el.textContent=text; }
+function setDocMsg(text, cls="muted") { const el=$("docMsg"); if (!el) return; el.className=cls; el.textContent=text; }
+
+function formatBytes(bytes) {
+  const n = Number(bytes || 0);
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function tableHasColumn(name) {
+  return state.activityColumns ? state.activityColumns.has(name) : false;
+}
+
+function loadLocalActivity() {
+  try {
+    const raw = localStorage.getItem(ACTIVITY_LOCAL_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalActivity(rows) {
+  localStorage.setItem(ACTIVITY_LOCAL_KEY, JSON.stringify(rows));
+}
+
+function mergeById(rows) {
+  const map = new Map();
+  rows.forEach((row) => {
+    if (!row?.id) return;
+    map.set(String(row.id), row);
+  });
+  return Array.from(map.values());
+}
+
+function detectActivityIdColumn(row) {
+  const candidates = ["id", "ID", "Id", "note_id", "entry_id", "activity_id", "uuid"];
+  const found = candidates.find((key) => Object.prototype.hasOwnProperty.call(row || {}, key));
+  if (found) return found;
+  const suffixMatch = Object.keys(row || {}).find((key) => key.toLowerCase().endsWith("_id"));
+  return suffixMatch || "";
+}
+
+function switchTab(tabName) {
+  if (tabName === "activity") {
+    state.feedMode = tabName;
+    loadEntries(tabName);
+  }
+  if (tabName === "documents") {
+    loadDocuments();
+  }
+  activeTab = tabName;
+  const panelName = tabName === "activity" ? "log" : tabName;
+  document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabName));
+  document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === panelName));
+}
+
+function initTabs() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
+}
+
+function isAdminUser(user) {
+  const role = String(user?.app_metadata?.role || user?.user_metadata?.role || "").toLowerCase();
+  const flag = Boolean(user?.app_metadata?.is_admin || user?.user_metadata?.is_admin);
+  const email = String(user?.email || "").toLowerCase();
+  if (SUPER_ADMIN_EMAILS.includes(email)) return true;
+  const listedAdmin = state.adminUsers.some((u) => u.email === email && (u.role === "admin" || u.role === "super_admin"));
+  return flag || role === "admin" || role === "super_admin" || ADMIN_EMAILS.includes(email) || listedAdmin;
+}
+
+function isSuperAdminUser(user) {
+  const role = String(user?.app_metadata?.role || user?.user_metadata?.role || "").toLowerCase();
+  const email = String(user?.email || "").toLowerCase();
+  if (SUPER_ADMIN_EMAILS.includes(email)) return true;
+  const listedSuperAdmin = state.adminUsers.some((u) => u.email === email && u.role === "super_admin");
+  return role === "super_admin" || listedSuperAdmin;
+}
+
+function syncAdminTabVisibility() {
+  const show = Boolean(state.isAdmin);
+  $("adminTabBtn").classList.toggle("hidden", !show);
+  $("adminPanel").classList.toggle("hidden", !show);
+  if (!show && activeTab === "admin") switchTab("overview");
+}
+
+function formatReservationRange(reservation) {
+  const startLabel = new Date(`${reservation.start}T00:00:00`).toLocaleDateString();
+  const endLabel = new Date(`${reservation.end}T00:00:00`).toLocaleDateString();
+  return reservation.start === reservation.end ? startLabel : `${startLabel} - ${endLabel}`;
+}
+
+function weatherIcon(code) {
+  if ([0].includes(code)) return "☀️";
+  if ([1, 2].includes(code)) return "🌤️";
+  if ([3].includes(code)) return "☁️";
+  if ([45, 48].includes(code)) return "🌫️";
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 80, 81, 82].includes(code)) return "🌧️";
+  if ([66, 67, 71, 73, 75, 77, 85, 86].includes(code)) return "❄️";
+  if ([95, 96, 99].includes(code)) return "⛈️";
+  return "🌡️";
+}
+
+function degreesToCompass(deg) {
+  const value = Number(deg);
+  if (!Number.isFinite(value)) return "--";
+  const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return dirs[Math.round(value / 22.5) % 16];
+}
+
+function fireRiskLabel(tempF, windMph, humidityPct) {
+  const score = (Number(tempF) || 0) * 0.45 + (Number(windMph) || 0) * 0.7 + (100 - (Number(humidityPct) || 100)) * 0.35;
+  if (score >= 70) return "High";
+  if (score >= 50) return "Moderate";
+  return "Low";
+}
+
+function seasonRangeForYear(year, startMMDD, endMMDD) {
+  const [sm, sd] = startMMDD.split("-").map(Number);
+  const [em, ed] = endMMDD.split("-").map(Number);
+  const start = new Date(year, sm - 1, sd);
+  let end = new Date(year, em - 1, ed);
+  if (end < start) end = new Date(year + 1, em - 1, ed);
+  return { start, end };
+}
+
+function tableForMode(mode = state.feedMode) {
+  return ACTIVITY_TABLE;
+}
+
+function renderOverview() {
+  if (state.currentWeather) {
+    const cw = state.currentWeather;
+    const icon = weatherIcon(Number(cw.weather_code ?? 0));
+    $("currentWeatherValue").textContent = `${Math.round(cw.temperature_2m ?? 0)}°F`;
+    $("currentWeatherMeta").textContent = `${icon}  Wind ${Math.round(cw.wind_speed_10m ?? 0)} mph · Humidity ${Math.round(cw.relative_humidity_2m ?? 0)}%`;
+  } else {
+    $("currentWeatherValue").textContent = "--°F";
+    $("currentWeatherMeta").textContent = "Loading current weather...";
+  }
+
+  const upcoming = [...state.reservations].sort((a, b) => a.start.localeCompare(b.start)).filter((r) => r.end >= today()).slice(0, 3);
+  const nextVisit = upcoming[0];
+  $("overviewNextVisit").textContent = nextVisit ? nextVisit.name : "No upcoming reservation";
+  $("overviewNextDates").textContent = nextVisit ? formatReservationRange(nextVisit) : "";
+
+  $("overviewUpcoming").innerHTML = upcoming.length
+    ? upcoming.map((r) => `<div class="mini-item"><strong>${esc(r.name)}</strong><div class="muted">${formatReservationRange(r)}</div></div>`).join("")
+    : `<div class="muted">No upcoming reservations.</div>`;
+
+  const openActivityIssues = [...state.activityEntriesAll].filter((e) => (e.status || "open") !== "resolved").slice(0, 5);
+  $("overviewActivityIssueCount").textContent = `${openActivityIssues.length} items`;
+  $("overviewActivityIssues").innerHTML = openActivityIssues.length
+    ? `<table><thead><tr><th>Issue</th><th>Category</th><th>By</th><th>Date</th></tr></thead><tbody>${openActivityIssues.map((e) => `<tr><td>${esc(e.title)}</td><td>${esc(e.category)}</td><td>${esc(e.author)}</td><td>${esc(e.date)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="muted" style="padding:10px;">No open activity items.</div>`;
+
+  $("countLabel").textContent = `Activity: ${state.entries.length} entries`;
+
+  const daily = state.weather;
+  const todaySunrise = daily?.sunrise?.[0] ? new Date(daily.sunrise[0]).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--";
+  const todaySunset = daily?.sunset?.[0] ? new Date(daily.sunset[0]).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--";
+  const todayHigh = Number(daily?.temperature_2m_max?.[0]);
+  const todayLow = Number(daily?.temperature_2m_min?.[0]);
+  const todayWindMax = Number(daily?.wind_speed_10m_max?.[0]);
+  const currentWindDir = degreesToCompass(state.currentWeather?.wind_direction_10m);
+  if (state.currentWeather) {
+    const humidity = Number(state.currentWeather.relative_humidity_2m ?? 0);
+    const fireRisk = fireRiskLabel(todayHigh, todayWindMax, humidity);
+    $("currentWeatherMeta").textContent = `${weatherIcon(Number(state.currentWeather.weather_code ?? 0))}  High/Low ${Number.isFinite(todayHigh) ? Math.round(todayHigh) : "--"}°F/${Number.isFinite(todayLow) ? Math.round(todayLow) : "--"}°F · Wind ${Math.round(state.currentWeather.wind_speed_10m ?? 0)} mph ${currentWindDir} (max ${Number.isFinite(todayWindMax) ? Math.round(todayWindMax) : "--"} mph) · Sunrise ${todaySunrise} · Sunset ${todaySunset} · Fire Risk ${fireRisk}`;
+  }
+
+  const openRequests = state.requests.filter((r) => !r.done).slice(0, 5);
+  $("overviewRequestCount").textContent = `${openRequests.length} items`;
+  $("overviewRequests").innerHTML = openRequests.length
+    ? `<table><thead><tr><th>Request</th><th>Requested By</th></tr></thead><tbody>${openRequests.map((r) => `<tr><td>${esc(r.title)}</td><td>${esc(r.owner)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="muted" style="padding:10px;">No open requests.</div>`;
+
+  if (daily?.time?.length) {
+    const cards = daily.time.map((d, i) => {
+      const icon = weatherIcon(Number(daily.weather_code[i]));
+      const sunrise = new Date(daily.sunrise[i]).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      const sunset = new Date(daily.sunset[i]).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      const windMax = Number(daily.wind_speed_10m_max?.[i] ?? 0);
+      const windDir = degreesToCompass(daily.wind_direction_10m_dominant?.[i]);
+      const humidity = Number(state.currentWeather?.relative_humidity_2m ?? 50);
+      const fireRisk = fireRiskLabel(daily.temperature_2m_max?.[i], windMax, humidity);
+      const clouds = Number(daily.cloud_cover_mean[i] ?? 100);
+      const star = clouds <= 30 ? "Great" : clouds <= 60 ? "Fair" : "Poor";
+      return `<div class="card" style="padding:10px;"><strong>${new Date(`${d}T12:00:00`).toLocaleDateString(undefined,{weekday:"short",month:"numeric",day:"numeric"})}</strong><div style="font-size:1.35rem;">${icon}</div><div>${Math.round(daily.temperature_2m_max[i])}°F / ${Math.round(daily.temperature_2m_min[i])}°F</div><div class="muted">Wind ${Math.round(windMax)} mph ${windDir}</div><div class="muted">Sunrise ${sunrise}</div><div class="muted">Sunset ${sunset}</div><div class="muted">Fire Risk: ${fireRisk}</div><div class="muted">Stargazing: ${star}</div></div>`;
+    }).join("");
+    $("overviewForecast").innerHTML = cards;
+  } else {
+    $("overviewForecast").innerHTML = `<div class="muted">Forecast unavailable right now.</div>`;
+  }
+  const now = new Date();
+  const inSeason = [];
+  const upcomingSeasons = [];
+  const in30 = new Date(now);
+  in30.setDate(in30.getDate() + 30);
+  MI_DNR_SEASONS.forEach((season) => {
+    const curYear = now.getFullYear();
+    const ranges = [
+      seasonRangeForYear(curYear - 1, season.start, season.end),
+      seasonRangeForYear(curYear, season.start, season.end),
+      seasonRangeForYear(curYear + 1, season.start, season.end)
+    ];
+    const activeRange = ranges.find((r) => now >= r.start && now <= r.end);
+    if (activeRange) {
+      inSeason.push(season.name);
+      return;
+    }
+    const nextRange = ranges.filter((r) => r.start > now).sort((a, b) => a.start - b.start)[0];
+    if (nextRange && nextRange.start <= in30) {
+      upcomingSeasons.push(`${season.name} (${nextRange.start.toLocaleDateString()})`);
+    }
+  });
+  $("seasonCurrent").textContent = inSeason.length ? inSeason.join(", ") : "No listed season currently open.";
+  $("seasonUpcoming").textContent = upcomingSeasons.length ? upcomingSeasons.join(", ") : "No listed openings in the next 30 days.";
+  $("tripForecastNote").textContent = "";
+}
 
 async function requireAuth() {
   const { data, error } = await sb.auth.getSession();
@@ -194,6 +586,8 @@ async function requireAuth() {
   }
 
   state.user = data.session.user;
+  state.isAdmin = isAdminUser(state.user);
+  syncAdminTabVisibility();
   const label = state.user.email || "Signed in";
   $("userLabel").textContent = `Signed in as ${label}`;
 
@@ -204,6 +598,12 @@ async function requireAuth() {
 
   if (metaName && !$("author").value.trim()) {
     $("author").value = metaName;
+  }
+  if (metaName && !$("resName").value.trim()) {
+    $("resName").value = metaName;
+  }
+  if (metaName && !$("requestOwner").value.trim()) {
+    $("requestOwner").value = metaName;
   }
 
   return true;
@@ -233,10 +633,281 @@ function loadReservations() {
   } catch {
     state.reservations = [];
   }
+  renderOverview();
 }
 
 function saveReservations() {
   localStorage.setItem(RESERVATION_KEY, JSON.stringify(state.reservations));
+}
+
+function loadRequests() {
+  try {
+    const raw = localStorage.getItem(REQUESTS_KEY);
+    state.requests = raw ? JSON.parse(raw) : [];
+  } catch {
+    state.requests = [];
+  }
+}
+
+function saveRequests() {
+  localStorage.setItem(REQUESTS_KEY, JSON.stringify(state.requests));
+}
+
+function renderRequests() {
+  const open = state.requests.filter((r) => !r.done);
+  const done = state.requests.filter((r) => r.done);
+  $("openRequestCount").textContent = String(open.length);
+  $("completedRequestCount").textContent = String(done.length);
+
+  const row = (r) => `<tr><td><input type="checkbox" data-request-toggle="${r.id}" ${r.done ? "checked" : ""}></td><td>${esc(r.title)}</td><td>${esc(r.owner || "Unknown")}</td></tr>`;
+  $("openRequestsList").innerHTML = open.length ? `<table><tbody>${open.map(row).join("")}</tbody></table>` : `<div class="muted" style="padding:10px;">No open requests.</div>`;
+  $("completedRequestsList").innerHTML = done.length ? `<table><tbody>${done.map(row).join("")}</tbody></table>` : `<div class="muted" style="padding:10px;">No completed requests.</div>`;
+
+  document.querySelectorAll("input[data-request-toggle]").forEach((el) => {
+    el.onchange = () => {
+      const id = el.dataset.requestToggle;
+      const target = state.requests.find((r) => r.id === id);
+      if (!target) return;
+      target.done = el.checked;
+      saveRequests();
+      renderRequests();
+      renderOverview();
+    };
+  });
+}
+
+function addRequest() {
+  const title = $("requestTitle").value.trim();
+  const owner = $("requestOwner").value.trim() || $("author").value.trim() || "Unknown";
+  if (!title) return;
+  state.requests.unshift({ id: crypto.randomUUID(), title, owner, done: false, created_at: new Date().toISOString() });
+  saveRequests();
+  $("requestTitle").value = "";
+  $("requestOwner").value = "";
+  $("newRequestForm").classList.add("hidden");
+  renderRequests();
+  renderOverview();
+}
+
+function mergeAdminUsers(list) {
+  const map = new Map();
+  for (const row of list) {
+    if (!row?.email) continue;
+    map.set(String(row.email).toLowerCase(), { email: String(row.email).toLowerCase(), role: row.role || "viewer" });
+  }
+  return Array.from(map.values());
+}
+
+async function loadAdminUsers() {
+  const seed = SUPER_ADMIN_EMAILS.map((email) => ({ email, role: "super_admin" }));
+  try {
+    const raw = localStorage.getItem(ADMIN_USERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    state.adminUsers = mergeAdminUsers([...seed, ...parsed]);
+  } catch {
+    state.adminUsers = seed;
+  }
+
+  let fetched = [];
+  let source = "";
+  try {
+    const { data, error } = await sb.from(ADMIN_TABLE).select("email, role").limit(2000);
+    if (!error && Array.isArray(data)) {
+      fetched = data;
+      source = ADMIN_TABLE;
+    }
+  } catch {}
+
+  if (!fetched.length) {
+    try {
+      const { data, error } = await sb.from("auth_users_view").select("email, role").limit(5000);
+      if (!error && Array.isArray(data)) {
+        fetched = data;
+        source = "auth_users_view";
+      }
+    } catch {}
+  }
+
+  if (!fetched.length) {
+    try {
+      const { data, error } = await sb.rpc("list_users");
+      if (!error && Array.isArray(data)) {
+        fetched = data;
+        source = "rpc:list_users";
+      }
+    } catch {}
+  }
+
+  if (!fetched.length) {
+    try {
+      const { data, error } = await sb.from("user_roles").select("email, role").limit(2000);
+      if (!error && Array.isArray(data)) {
+        fetched = data;
+        source = "user_roles";
+      }
+    } catch {}
+  }
+
+  if (!fetched.length) {
+    try {
+      const { data, error } = await sb.from("profiles").select("email, role").limit(2000);
+      if (!error && Array.isArray(data)) {
+        fetched = data;
+        source = "profiles";
+      }
+    } catch {}
+  }
+
+  if (fetched.length) {
+    state.adminUsers = mergeAdminUsers([...state.adminUsers, ...fetched]);
+    $("adminMsg").textContent = `Synced users from Supabase table: ${source}. Super Admin users cannot be removed.`;
+  } else {
+    $("adminMsg").textContent = "Could not load user list from Supabase tables/views; showing local admin list. Super Admin users cannot be removed.";
+  }
+}
+
+function saveAdminUsers() {
+  localStorage.setItem(ADMIN_USERS_KEY, JSON.stringify(state.adminUsers));
+}
+
+function renderAdminUsers() {
+  const rows = state.adminUsers.map((u) => {
+    const locked = u.role === "super_admin" || SUPER_ADMIN_EMAILS.includes(u.email);
+    return `<tr>
+      <td>${esc(u.email)}</td>
+      <td>
+        <select data-admin-role="${esc(u.email)}" ${locked ? "disabled" : ""}>
+          <option value="viewer" ${u.role==="viewer"?"selected":""}>Viewer</option>
+          <option value="member" ${u.role==="member"?"selected":""}>Member</option>
+          <option value="admin" ${u.role==="admin"?"selected":""}>Admin</option>
+          <option value="super_admin" ${u.role==="super_admin"?"selected":""}>Super Admin</option>
+        </select>
+      </td>
+      <td><button class="danger tiny-btn" data-admin-remove="${esc(u.email)}" ${locked ? "disabled" : ""}>Remove</button></td>
+    </tr>`;
+  }).join("");
+
+  $("adminUsersTable").innerHTML = `<table><thead><tr><th>User</th><th>Role</th><th>Actions</th></tr></thead><tbody>${rows || `<tr><td colspan="3" class="muted">No users yet.</td></tr>`}</tbody></table>`;
+
+  document.querySelectorAll("select[data-admin-role]").forEach((el) => {
+    el.onchange = () => {
+      const email = el.dataset.adminRole.toLowerCase();
+      const row = state.adminUsers.find((u) => u.email === email);
+      if (!row) return;
+      row.role = el.value;
+      saveAdminUsers();
+      sb.from(ADMIN_TABLE).upsert({ email, role: row.role, updated_at: new Date().toISOString() }, { onConflict: "email" });
+    };
+  });
+  document.querySelectorAll("button[data-admin-remove]").forEach((el) => {
+    el.onclick = async () => {
+      const email = el.dataset.adminRemove.toLowerCase();
+      if (SUPER_ADMIN_EMAILS.includes(email)) return;
+      state.adminUsers = state.adminUsers.filter((u) => u.email !== email);
+      saveAdminUsers();
+      try { await sb.from(ADMIN_TABLE).delete().eq("email", email); } catch {}
+      renderAdminUsers();
+    };
+  });
+}
+
+async function addOrUpdateAdminUser() {
+  const email = $("adminEmail").value.trim().toLowerCase();
+  const role = $("adminRole").value;
+  if (!email) return;
+  const existing = state.adminUsers.find((u) => u.email === email);
+  if (existing) existing.role = role;
+  else state.adminUsers.push({ email, role });
+  saveAdminUsers();
+  try {
+    await sb.from(ADMIN_TABLE).upsert({ email, role, updated_at: new Date().toISOString() }, { onConflict: "email" });
+  } catch {}
+  renderAdminUsers();
+  $("adminEmail").value = "";
+}
+
+async function loadDocuments() {
+  const list = $("documentsList");
+  if (!list) return;
+  list.innerHTML = `<div class="muted" style="padding:10px;">Loading documents...</div>`;
+  try {
+    const { data, error } = await sb.storage.from(DOCS_BUCKET).list("", { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+    if (error) throw error;
+    const docs = (data || []).filter((f) => f.name && !f.name.endsWith("/"));
+    if (!docs.length) {
+      list.innerHTML = `<div class="muted" style="padding:10px;">No documents uploaded yet.</div>`;
+      return;
+    }
+    const canDeleteDocuments = isSuperAdminUser(state.user);
+    list.innerHTML = docs.map((doc) => {
+      const { data: pub } = sb.storage.from(DOCS_BUCKET).getPublicUrl(doc.name);
+      return `<div class="doc-row"><div class="doc-meta"><div class="doc-name">${esc(doc.name)}</div><div class="muted">${formatBytes(doc.metadata?.size || 0)}</div></div><div class="doc-actions"><a href="${esc(pub.publicUrl)}" target="_blank" rel="noreferrer">Download</a>${canDeleteDocuments ? `<button class="danger tiny-btn" data-doc-delete="${esc(doc.name)}">Delete</button>` : ""}</div></div>`;
+    }).join("");
+    if (canDeleteDocuments) {
+      list.querySelectorAll("button[data-doc-delete]").forEach((btn) => {
+        btn.onclick = async () => {
+          const fileName = btn.dataset.docDelete;
+          if (!fileName || !confirm(`Delete document "${fileName}"?`)) return;
+          await deleteDocument(fileName);
+        };
+      });
+    }
+  } catch (err) {
+    list.innerHTML = `<div class="muted" style="padding:10px;">Could not load documents.</div>`;
+    const msg = String(err?.message || err || "");
+    if (msg.toLowerCase().includes("bucket") && msg.toLowerCase().includes("not found")) {
+      setDocMsg(`Documents bucket "${DOCS_BUCKET}" is missing. Create it in Supabase Storage first.`, "error");
+    } else {
+      setDocMsg(`Documents load failed: ${msg}`, "error");
+    }
+  }
+}
+
+async function deleteDocument(fileName) {
+  const { error } = await sb.storage.from(DOCS_BUCKET).remove([fileName]);
+  if (error) {
+    const msg = String(error?.message || error || "");
+    if (msg.toLowerCase().includes("schema is invalid or incompatible")) {
+      return setDocMsg("Delete failed: storage DELETE policy is referencing missing tables/columns. Recreate the documents delete policy in Supabase SQL.", "error");
+    }
+    return setDocMsg(`Delete failed: ${msg}`, "error");
+  }
+  setDocMsg("Document deleted.", "ok");
+  await loadDocuments();
+}
+
+async function uploadDocument() {
+  const input = $("docFile");
+  const file = input?.files?.[0];
+  if (!file) return setDocMsg("Choose a file to upload.", "error");
+  if (file.size > MAX_DOC_SIZE_BYTES) return setDocMsg("File is too large. Maximum size is 20MB.", "error");
+  setDocMsg("Uploading...");
+  const path = `${today()}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const { error } = await sb.storage.from(DOCS_BUCKET).upload(path, file, { upsert: false });
+  if (error) {
+    const msg = String(error?.message || error || "");
+    if (msg.toLowerCase().includes("bucket") && msg.toLowerCase().includes("not found")) {
+      return setDocMsg(`Upload failed: bucket "${DOCS_BUCKET}" does not exist. Create it in Supabase first.`, "error");
+    }
+    return setDocMsg(msg || "Upload failed.", "error");
+  }
+  input.value = "";
+  setDocMsg("Upload complete.", "ok");
+  await loadDocuments();
+}
+
+async function loadWeather() {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,cloud_cover_mean,wind_speed_10m_max,wind_direction_10m_dominant&forecast_days=7&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=America%2FDetroit`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    state.weather = data?.daily || null;
+    state.currentWeather = data?.current || null;
+  } catch {
+    state.weather = null;
+    state.currentWeather = null;
+  }
+  renderOverview();
 }
 
 function getReservationForDate(dateStr) {
@@ -254,7 +925,9 @@ function renderSchedule() {
     const startLabel = new Date(`${r.start}T00:00:00`).toLocaleDateString();
     const endLabel = new Date(`${r.end}T00:00:00`).toLocaleDateString();
     const rangeLabel = r.start === r.end ? startLabel : `${startLabel} - ${endLabel}`;
-    return `<tr><td>${rangeLabel}</td><td class="status-reserved">Reserved</td><td>${esc(r.name)}</td></tr>`;
+    const status = r.end < today() ? "Completed" : "Reserved";
+    const statusClass = status === "Completed" ? "muted" : "status-reserved";
+    return `<tr><td>${rangeLabel}</td><td class="${statusClass}">${status}</td><td>${esc(r.name)}</td></tr>`;
   }).join("");
   view.innerHTML = `<table><thead><tr><th>Date Range</th><th>Status</th><th>Reserved By</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -331,6 +1004,7 @@ function reserveDates() {
   state.reservations.sort((a,b) => a.start.localeCompare(b.start));
   saveReservations();
   renderSchedule();
+  renderOverview();
   setReserveMsg("Reservation saved.", "ok");
   $("resName").value = "";
 }
@@ -356,22 +1030,26 @@ function formatPhotoUploadError(err) {
   }
 
   if (status === 401 || status === 403 || lower.includes("row-level security") || lower.includes("permission") || lower.includes("not authorized")) {
-    return `Photo upload failed: storage policy blocked upload to "${PHOTO_BUCKET}". Add INSERT policy access for the anon role on storage.objects.`;
+    return `Photo upload failed: storage RLS blocked upload to "${PHOTO_BUCKET}". Add Storage policies for authenticated users on storage.objects (INSERT + SELECT) where bucket_id = "${PHOTO_BUCKET}".`;
   }
 
   return `Photo upload failed: ${message}`;
 }
 
 function normalize(row) {
+  const rowIdColumn = detectActivityIdColumn(row);
+  const fallbackId = `${row.created_at || row.event_at || Date.now()}-${row.title || "row"}`;
   return {
-    id: row.id,
+    id: rowIdColumn ? (row?.[rowIdColumn] ?? fallbackId) : fallbackId,
+    id_column: rowIdColumn,
     date: row.event_at ? String(row.event_at).slice(0,10) : (row.created_at ? String(row.created_at).slice(0,10) : today()),
     category: row.entry_type || "notes",
     title: row.title || "",
     description: row.body || "",
-    tags: row.tags || [],
+    tags: [],
     photos: row.photo_urls || [],
     author: row.author || "Unknown",
+    status: row.status || "open",
     created_at: row.created_at || row.event_at || new Date().toISOString(),
     workspace_id: row.workspace_id || null
   };
@@ -379,16 +1057,18 @@ function normalize(row) {
 
 function toPayload() {
   const date = $("date").value || today();
-  return {
+  const payload = {
     title: $("title").value.trim(),
     body: $("description").value.trim(),
-    tags: $("tags").value.split(",").map((x) => x.trim()).filter(Boolean),
     author: $("author").value.trim() || "Unknown",
-    workspace_id: $("workspaceId").value.trim() || null,
-    entry_type: $("category").value,
-    event_at: `${date}T12:00:00.000Z`,
-    updated_at: new Date().toISOString()
+    status: $("status").value,
+    event_at: `${date}T12:00:00.000Z`
   };
+  if (tableHasColumn("entry_type")) payload.entry_type = $("category").value;
+  if (tableHasColumn("workspace_id")) payload.workspace_id = $("workspaceId").value.trim() || null;
+  if (tableHasColumn("updated_at")) payload.updated_at = new Date().toISOString();
+  if (state.feedMode === "activity" && state.activityHasUserId === true && state.user?.id) payload.user_id = state.user.id;
+  return payload;
 }
 
 async function uploadPhotos(files) {
@@ -405,9 +1085,10 @@ async function uploadPhotos(files) {
 }
 
 async function resolveWorkspaceId() {
+  if (!tableHasColumn("workspace_id")) return "1";
   if (state.workspaceId) return state.workspaceId;
 
-  const { data: noteRows } = await sb.from("notes").select("workspace_id").not("workspace_id", "is", null).limit(500);
+  const { data: noteRows } = await sb.from(tableForMode()).select("workspace_id").not("workspace_id", "is", null).limit(500);
   const numericIds = (noteRows || [])
     .map((row) => Number.parseInt(String(row.workspace_id), 10))
     .filter((value) => Number.isFinite(value));
@@ -431,13 +1112,12 @@ function matchesFilters(e) {
   const author = $("fAuthor").value.trim().toLowerCase();
   const from = $("fFrom").value;
   const to = $("fTo").value;
-  const tag = $("fTags").value.trim().toLowerCase();
   if (cat && e.category !== cat) return false;
   if (author && !e.author.toLowerCase().includes(author)) return false;
   if (from && e.date < from) return false;
   if (to && e.date > to) return false;
-  if (tag && !(e.tags || []).some((t) => String(t).toLowerCase().includes(tag))) return false;
   if (kw && !`${e.title} ${e.description}`.toLowerCase().includes(kw)) return false;
+  if (state.logStatusFilter !== "all" && (e.status || "open") !== state.logStatusFilter) return false;
   return true;
 }
 
@@ -475,17 +1155,17 @@ function applyView() {
   state.hasMore = sorted.length > limit;
   state.entries = sorted.slice(0, limit);
   renderFeed();
+  renderOverview();
 }
 
 function exportCsv() {
-  const headers = ["Date", "Category", "Title", "Description", "Author", "Tags", "Created At"];
+  const headers = ["Date", "Category", "Title", "Description", "Author", "Created At"];
   const rows = state.filteredEntries.map((e) => [
     e.date,
     e.category,
     e.title,
     e.description,
     e.author,
-    (e.tags || []).join("|"),
     e.created_at
   ]);
   const csv = [headers, ...rows]
@@ -503,7 +1183,7 @@ function exportCsv() {
 function renderFeed() {
   const feed = $("feed");
   feed.innerHTML = "";
-  $("countLabel").textContent = `${state.entries.length} entries`;
+  $("countLabel").textContent = `${state.feedMode === "activity" ? "Activity" : "Log"}: ${state.entries.length} entries`;
   if (!state.entries.length) {
     feed.innerHTML = `<div class="muted" style="padding:10px;">No entries found.</div>`;
     return;
@@ -512,17 +1192,20 @@ function renderFeed() {
   const dirSymbol = state.sortDir === "asc" ? "▲" : "▼";
   const hdr = (key, label) => `<button data-sort="${key}">${label} ${state.sortBy === key ? dirSymbol : ""}</button>`;
   const rows = state.entries.map((e) => {
-    const tags = (e.tags || []).map((t) => `<span class="chip">#${esc(t)}</span>`).join("");
     const photos = (e.photos || []).map((p) => `<a href="${esc(p)}" target="_blank" rel="noreferrer"><img src="${esc(p)}" alt="photo" class="thumb" /></a>`).join("");
+    const status = e.status || "open";
+    const statusBtn = status === "resolved"
+      ? `<button class="tiny-btn" data-reopen="${e.id}" data-id-col="${esc(e.id_column || state.activityIdColumn)}">Reopen</button>`
+      : `<button class="tiny-btn primary" data-resolve="${e.id}" data-id-col="${esc(e.id_column || state.activityIdColumn)}">Resolve</button>`;
     return `
       <tr>
         <td>${esc(e.date)}</td>
         <td>${esc(e.category)}</td>
         <td class="issue-cell"><div class="issue-title">${esc(e.title)}</div><div class="muted issue-desc">${esc(e.description)}</div></td>
         <td>${esc(e.author)}</td>
-        <td>${tags}</td>
+        <td>${esc(status)}</td>
         <td><div class="thumb-list">${photos}</div></td>
-        <td><button class="tiny-btn" data-edit="${e.id}">Edit</button> <button class="tiny-btn danger" data-delete="${e.id}">Delete</button></td>
+        <td><button class="tiny-btn" data-edit="${e.id}" data-id-col="${esc(e.id_column || state.activityIdColumn)}">Edit</button> ${statusBtn} <button class="tiny-btn danger" data-delete="${e.id}" data-id-col="${esc(e.id_column || state.activityIdColumn)}">Delete</button></td>
       </tr>`;
   }).join("");
 
@@ -534,7 +1217,7 @@ function renderFeed() {
           <th>${hdr("category", "Category")}</th>
           <th>${hdr("title", "Issue")}</th>
           <th>${hdr("author", "User")}</th>
-          <th>Tags</th>
+          <th>Status</th>
           <th>Photos</th>
           <th>${hdr("created_at", "Created")}</th>
         </tr>
@@ -543,16 +1226,51 @@ function renderFeed() {
     </table>`;
 
   feed.querySelectorAll("button[data-sort]").forEach((b) => b.onclick = () => toggleSort(b.dataset.sort));
-  feed.querySelectorAll("button[data-edit]").forEach((b) => b.onclick = () => startEdit(b.dataset.edit));
-  feed.querySelectorAll("button[data-delete]").forEach((b) => b.onclick = () => quickDelete(b.dataset.delete));
+  feed.querySelectorAll("button[data-edit]").forEach((b) => b.onclick = () => startEdit(b.dataset.edit, b.dataset.idCol || state.activityIdColumn));
+  feed.querySelectorAll("button[data-delete]").forEach((b) => b.onclick = () => quickDelete(b.dataset.delete, b.dataset.idCol || state.activityIdColumn));
+  feed.querySelectorAll("button[data-resolve]").forEach((b) => b.onclick = () => setEntryStatus(b.dataset.resolve, "resolved", b.dataset.idCol || state.activityIdColumn));
+  feed.querySelectorAll("button[data-reopen]").forEach((b) => b.onclick = () => setEntryStatus(b.dataset.reopen, "open", b.dataset.idCol || state.activityIdColumn));
   $("loadMoreBtn").classList.toggle("hidden", !state.hasMore);
 }
 
-async function loadEntries() {
-  const { data, error } = await sb.from("notes").select("*").order("event_at", { ascending:false }).order("created_at", { ascending:false }).limit(500);
-  if (error) return setMsg(`Load failed: ${error.message}`, "error");
+async function setEntryStatus(id, status, idColumn = state.activityIdColumn) {
+  if (!idColumn) return setMsg("Cannot resolve/reopen: no ID column found in activity table schema.", "error");
+  const localRows = loadLocalActivity();
+  const localTarget = localRows.find((e) => String(e.id) === String(id));
+  if (localTarget) {
+    localTarget.status = status;
+    if (tableHasColumn("updated_at")) localTarget.updated_at = new Date().toISOString();
+    saveLocalActivity(localRows);
+  }
+  const row = state.entries.find((e) => e.id === id) || state.activityEntriesAll.find((e) => e.id === id);
+  const changes = { status };
+  if (tableHasColumn("updated_at")) changes.updated_at = new Date().toISOString();
+  let result = await sb.from(tableForMode()).update(changes).eq(idColumn, id).select(idColumn);
+  if ((!result.error && (!Array.isArray(result.data) || !result.data.length)) && row) {
+    let fallback = sb.from(tableForMode()).update(changes);
+    if (tableHasColumn("title")) fallback = fallback.eq("title", row.title);
+    if (tableHasColumn("created_at")) fallback = fallback.eq("created_at", row.created_at);
+    if (tableHasColumn("author")) fallback = fallback.eq("author", row.author);
+    result = await fallback.select(idColumn || "id");
+  }
+  if (result.error) setMsg(`Saved locally. Supabase sync warning: ${result.error.message}`, "error");
+  if (!result.error && (!Array.isArray(result.data) || !result.data.length)) setMsg("Saved locally. Supabase update matched 0 rows.", "error");
+  await loadEntries();
+}
 
-  const normalized = (data || []).map(normalize);
+async function loadEntries(mode = state.feedMode) {
+  const table = tableForMode(mode);
+  const localData = loadLocalActivity();
+  const localNormalized = localData.map(normalize);
+  const { data, error } = await sb.from(table).select("*").order("event_at", { ascending:false }).order("created_at", { ascending:false }).limit(500);
+  if (error) setMsg(isRlsError(error) ? `Supabase read blocked; using local activity data.` : `Supabase read warning: ${error.message}`, "error");
+  state.activityHasUserId = Boolean((data || []).some((row) => Object.prototype.hasOwnProperty.call(row || {}, "user_id")));
+  state.activityColumns = new Set((data?.[0] && typeof data[0] === "object") ? Object.keys(data[0]) : []);
+  if (data?.length) state.activityIdColumn = detectActivityIdColumn(data[0]);
+
+  const remoteNormalized = (data || []).map(normalize);
+  const normalized = mergeById([...localNormalized, ...remoteNormalized]);
+  saveLocalActivity(normalized);
   const numericWorkspaceIds = normalized
     .map((row) => Number.parseInt(String(row.workspace_id || ""), 10))
     .filter((value) => Number.isFinite(value));
@@ -563,6 +1281,7 @@ async function loadEntries() {
   if (!state.workspaceId) state.workspaceId = "1";
   $("workspaceId").value = state.workspaceId;
 
+  state.activityEntriesAll = normalized;
   state.filteredEntries = normalized.filter(matchesFilters);
   applyView();
 }
@@ -571,9 +1290,10 @@ function resetForm() {
   state.editing = null;
   state.selectedFiles = [];
   $("formTitle").textContent = "New Entry";
-  ["title","description","tags","photos"].forEach((id) => $(id).value = "");
+  ["title","description","photos"].forEach((id) => $(id).value = "");
   $("deleteBtn").classList.add("hidden");
   $("cancelBtn").classList.add("hidden");
+  $("status").value = "open";
 
   if (state.user?.user_metadata) {
     const metaName = [state.user.user_metadata.first_name, state.user.user_metadata.last_name]
@@ -586,9 +1306,10 @@ function resetForm() {
   setMsg("");
 }
 
-function startEdit(id) {
+function startEdit(id, idColumn = state.activityIdColumn) {
   const e = state.entries.find((x) => x.id === id);
   if (!e) return;
+  e.id_column = idColumn || e.id_column || state.activityIdColumn;
   state.editing = e;
   $("formTitle").textContent = "Edit Entry";
   $("author").value = e.author;
@@ -597,51 +1318,82 @@ function startEdit(id) {
   $("category").value = e.category;
   $("title").value = e.title;
   $("description").value = e.description;
-  $("tags").value = (e.tags || []).join(", ");
+  $("status").value = e.status || "open";
   $("photos").value = "";
   state.selectedFiles = [];
   $("deleteBtn").classList.remove("hidden");
   $("cancelBtn").classList.remove("hidden");
+  switchTab("activity");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-async function quickDelete(id) {
+async function quickDelete(id, idColumn = state.activityIdColumn) {
+  if (!idColumn) return setMsg("Cannot delete: no ID column found in activity table schema.", "error");
   if (!confirm("Delete this entry?")) return;
-  const { error } = await sb.from("notes").delete().eq("id", id);
-  if (error) return setMsg(error.message, "error");
+  const localRows = loadLocalActivity().filter((e) => String(e.id) !== String(id));
+  saveLocalActivity(localRows);
+  const row = state.entries.find((e) => e.id === id) || state.activityEntriesAll.find((e) => e.id === id);
+  let result = await sb.from(tableForMode()).delete().eq(idColumn, id).select(idColumn);
+  if ((!result.error && (!Array.isArray(result.data) || !result.data.length)) && row) {
+    let fallback = sb.from(tableForMode()).delete();
+    if (tableHasColumn("title")) fallback = fallback.eq("title", row.title);
+    if (tableHasColumn("created_at")) fallback = fallback.eq("created_at", row.created_at);
+    if (tableHasColumn("author")) fallback = fallback.eq("author", row.author);
+    result = await fallback.select(idColumn || "id");
+  }
+  if (result.error) setMsg(isRlsError(result.error) ? "Deleted locally. Supabase delete blocked by RLS." : `Deleted locally. Supabase warning: ${result.error.message}`, "error");
+  if (!result.error && (!Array.isArray(result.data) || !result.data.length)) setMsg("Deleted locally. Supabase delete matched 0 rows.", "error");
   if (state.editing?.id === id) resetForm();
   await loadEntries();
 }
 
 async function saveEntry() {
   const payload = toPayload();
-  if (!payload.title || !payload.body || !payload.entry_type || !payload.author) return setMsg("Name, category, title, and description are required.", "error");
+  if (!payload.title || !payload.body || !payload.author) return setMsg("Name, category, title, and description are required.", "error");
 
   setMsg("Saving...");
   let error;
 
   try {
     const uploaded = state.selectedFiles.length ? await uploadPhotos(state.selectedFiles) : [];
-    payload.photo_urls = [...(state.editing?.photos || []), ...uploaded];
+    if (tableHasColumn("photo_urls")) payload.photo_urls = [...(state.editing?.photos || []), ...uploaded];
   } catch (e) {
     return setMsg(formatPhotoUploadError(e), "error");
   }
 
   if (state.editing?.id) {
-    ({ error } = await sb.from("notes").update(payload).eq("id", state.editing.id));
+    const editIdCol = state.editing.id_column || state.activityIdColumn;
+    if (!editIdCol) return setMsg("Cannot edit: no ID column found in activity table schema.", "error");
+    let result = await sb.from(tableForMode()).update(payload).eq(editIdCol, state.editing.id).select(editIdCol);
+    if ((!result.error && (!Array.isArray(result.data) || !result.data.length))) {
+      let fallback = sb.from(tableForMode()).update(payload);
+      if (tableHasColumn("title")) fallback = fallback.eq("title", state.editing.title);
+      if (tableHasColumn("created_at")) fallback = fallback.eq("created_at", state.editing.created_at);
+      if (tableHasColumn("author")) fallback = fallback.eq("author", state.editing.author);
+      result = await fallback.select(editIdCol || "id");
+    }
+    error = result.error;
+    if (!error && (!Array.isArray(result.data) || !result.data.length)) error = { message: "Supabase update matched 0 rows." };
   } else {
-    payload.id = crypto.randomUUID();
+    if (tableHasColumn("id")) payload.id = crypto.randomUUID();
     try {
       payload.workspace_id = payload.workspace_id || await resolveWorkspaceId();
     } catch (workspaceErr) {
       return setMsg(workspaceErr.message || String(workspaceErr), "error");
     }
-    ({ error } = await sb.from("notes").insert(payload));
+    ({ error } = await sb.from(tableForMode()).insert(payload));
   }
 
-  if (error) return setMsg(error.message, "error");
-
-  setMsg("Saved.", "ok");
+  const localRows = loadLocalActivity();
+  if (state.editing?.id) {
+    const idx = localRows.findIndex((e) => String(e.id) === String(state.editing.id));
+    if (idx >= 0) localRows[idx] = { ...localRows[idx], ...payload, id: state.editing.id };
+  } else {
+    localRows.unshift({ ...payload, id: payload.id || crypto.randomUUID(), created_at: new Date().toISOString() });
+  }
+  saveLocalActivity(localRows);
+  if (error) setMsg(`Saved locally. Supabase warning: ${error.message}`, "error");
+  else setMsg("Saved.", "ok");
   resetForm();
   state.page = 0;
   await loadEntries();
@@ -655,6 +1407,7 @@ function initCategoryOptions() {
 }
 
 (function init() {
+  initTabs();
   initCategoryOptions();
   $("date").value = today();
 
@@ -666,7 +1419,7 @@ function initCategoryOptions() {
   $("deleteBtn").onclick = () => state.editing?.id && quickDelete(state.editing.id);
   $("applyFilters").onclick = async () => { state.page = 0; await loadEntries(); };
   $("clearFilters").onclick = async () => {
-    ["fKeyword","fCategory","fAuthor","fFrom","fTo","fTags"].forEach((id) => $(id).value = "");
+    ["fKeyword","fCategory","fAuthor","fFrom","fTo"].forEach((id) => $(id).value = "");
     state.page = 0;
     await loadEntries();
   };
@@ -675,6 +1428,13 @@ function initCategoryOptions() {
   $("reserveBtn").onclick = reserveDates;
   $("openCalendarLink").onclick = (e) => { e.preventDefault(); openCalendarPopup(); };
   $("closeCalendarBtn").onclick = closeCalendarPopup;
+  $("newRequestBtn").onclick = () => $("newRequestForm").classList.toggle("hidden");
+  $("saveRequestBtn").onclick = addRequest;
+  $("addAdminUserBtn").onclick = addOrUpdateAdminUser;
+  $("uploadDocBtn").onclick = uploadDocument;
+  $("logFilterAll").onclick = async () => { state.logStatusFilter = "all"; state.page = 0; await loadEntries(); };
+  $("logFilterOpen").onclick = async () => { state.logStatusFilter = "open"; state.page = 0; await loadEntries(); };
+  $("logFilterResolved").onclick = async () => { state.logStatusFilter = "resolved"; state.page = 0; await loadEntries(); };
 
   $("logoutBtn").onclick = async () => {
     await sb.auth.signOut();
@@ -690,13 +1450,23 @@ function initCategoryOptions() {
   (async () => {
     const ok = await requireAuth();
     if (!ok) return;
+    await loadAdminUsers();
+    renderAdminUsers();
 
     loadReservations();
+    loadRequests();
+    renderRequests();
     initReservationInputs();
     renderSchedule();
-    await loadEntries();
+    await loadDocuments();
+    await loadWeather();
+    state.feedMode = "activity";
+    await loadEntries("activity");
+    renderFeed();
+    renderOverview();
   })();
 })();
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"1beff2a699ca4a0abe9c05ce702fefff","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>

@@ -1,45 +1,61 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Reset Password</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+--paper:#f2efe7;
+--paper-dark:#e5e0d5;
+--card:#f8f6f0;
+--line:#cec8bb;
+--text:#2f342f;
+--muted:#76756d;
+--accent:#6b874f;
+--accent2:#4f6739;
+--danger:#b4423a;
+--shadow:0 10px 26px rgba(45,40,29,.10);
+}
+*{box-sizing:border-box;}
+body{margin:0;min-height:100vh;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);background:radial-gradient(circle at 20% 0%, rgba(255,255,255,.4), transparent 55%), linear-gradient(180deg, var(--paper-dark), var(--paper));display:grid;place-items:center;padding:18px;}
+.card{width:min(460px,100%);background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);display:grid;gap:12px;}
+input,button{font:inherit;color:var(--text);}
+input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;}
+button{border:1px solid var(--accent);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--accent);color:#fff;}
+#msg{color:var(--muted);font-size:.92rem;}
+@media (max-width:600px){
+  body{padding:12px;}
+  .card{padding:14px;border-radius:14px;gap:10px;}
+  h2{font-size:1.2rem;}
+  input,button{font-size:16px;}
+}
+</style>
 </head>
-
 <body>
-
-<h2>Reset Password</h2>
-
-<input id="pw1" placeholder="New password" type="password">
-<br><br>
+<section class="card">
+<h2 style="margin:0;">Reset Password</h2>
+<label>New Password<input id="pw1" placeholder="New password" type="password"></label>
 <button id="save">Update Password</button>
-
 <div id="msg"></div>
+</section>
 
 <script>
-
 const sb=supabase.createClient(
 "https://gpbusqwvjjhpwitoovkd.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8"
 )
 
 document.getElementById("save").onclick=async()=>{
-
 const password=document.getElementById("pw1").value
-
 const {error}=await sb.auth.updateUser({password})
-
 if(error) return msg(error.message)
-
 msg("Password updated. Redirecting...")
-
 setTimeout(()=>location.href="login.html",1500)
-
 }
 
 function msg(t){document.getElementById("msg").innerText=t}
-
 </script>
-
 </body>
 </html>

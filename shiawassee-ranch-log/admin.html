@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Shiawassee Ranch Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#eef3f8;--bg-soft:#e4ecf6;--card:#ffffff;--line:#d3deea;--text:#0f2741;--muted:#5f7287;--accent:#00a7e1;--danger:#c23b3b;--shadow:0 12px 30px rgba(16,40,69,.10);}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Calibri,"Segoe UI",Arial,sans-serif;color:var(--text);background:linear-gradient(180deg,var(--bg-soft)0%,var(--bg)48%)}
+.container{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);display:grid;gap:10px}
+.grid2{display:grid;gap:10px;grid-template-columns:1fr}
+.grid3{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:760px){.grid2{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:repeat(3,1fr)}}
+input,select,button{font:inherit} input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px}
+button{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer}
+.primary{background:var(--accent);color:#fff;border-color:var(--accent)} .danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}.split{display:flex;gap:8px;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:.9rem}.error{color:var(--danger)}.ok{color:var(--accent)}.hidden{display:none!important}
+table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+@media (max-width:760px){.container{padding:10px;gap:10px}.card{padding:12px;border-radius:14px}.top{align-items:flex-start}.top .split{width:100%}.top .split button{flex:1}.grid2,.grid3{grid-template-columns:1fr}.create-help{display:block}.actions-cell{display:grid;grid-template-columns:1fr 1fr;gap:6px}.actions-cell .danger{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<div class="container">
+  <section class="card">
+    <div class="top">
+      <div>
+        <h1 style="margin:0">Admin Panel</h1>
+        <div class="muted">Manage all user accounts and access.</div>
+      </div>
+      <div class="split">
+        <button id="backBtn" class="primary">Back to Log</button>
+        <button id="logoutBtn" class="danger">Log Out</button>
+      </div>
+    </div>
+    <div id="whoami" class="muted">Checking session...</div>
+    <div id="msg" class="muted"></div>
+  </section>
+
+  <section class="card">
+    <h2 style="margin:0">Create Account</h2>
+    <form id="createForm" class="grid2">
+      <div class="grid2">
+        <label>First Name<input id="newFirst" required /></label>
+        <label>Last Name<input id="newLast" required /></label>
+      </div>
+      <div class="grid3">
+        <label>Email<input id="newEmail" type="email" required /></label>
+        <label>Password<input id="newPassword" type="password" minlength="6" required /></label>
+        <label>Role<select id="newRole"><option value="user">User</option><option value="admin">Admin</option></select></label>
+      </div>
+      <button class="primary">Create Account</button>
+      <div class="muted create-help">New users default to <b>user</b>. Admin role can be assigned here.</div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="top">
+      <h2 style="margin:0">User Access</h2>
+      <button id="refreshBtn">Refresh</button>
+    </div>
+    <div style="overflow:auto">
+      <table>
+        <thead><tr><th>Email</th><th>First Name</th><th>Last Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+    <div class="muted">Super admin (james.t.versical@gmail.com) cannot be demoted/removed. Users are loaded from Supabase Auth (when enabled), role config, user directory, and known app activity.</div>
+    <div id="authSourceHint" class="muted"></div>
+  </section>
+</div>
+<script>
+const SUPABASE_URL="https://gpbusqwvjjhpwitoovkd.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
+const SUPER_ADMIN_EMAIL="james.t.versical@gmail.com";
+const ROLE_CONFIG_TITLE="__system_user_roles__";
+const USER_DIRECTORY_TITLE="__system_user_directory__";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const $=(id)=>document.getElementById(id);
+const state={user:null,config:{admins:[],disabled:[],profiles:{}},record:null,directoryRecord:null,session:null,discoveredUsers:[],discoveredProfiles:{},directoryUsers:[],authUsers:[],authSource:"none"};
+const norm=(e)=>String(e||"").trim().toLowerCase();
+const esc=(s)=>String(s||"").replace(/[&<>"']/g,(m)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const msg=(t,c="muted")=>{const el=$("msg");el.className=c;el.textContent=t;};
+const isSuper=(email)=>norm(email)===SUPER_ADMIN_EMAIL;
+const isAdmin=(email)=>isSuper(email)||(state.config.admins||[]).includes(norm(email));
+const isEmail=(value)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(norm(value));
+
+function parseDisplayName(name){
+  const trimmed = String(name || "").trim();
+  if (!trimmed) return { first_name: "", last_name: "" };
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { first_name: parts[0] || "", last_name: "" };
+  return { first_name: parts[0], last_name: parts.slice(1).join(" ") };
+}
+
+function mergeDiscoveredProfile(email, patch={}){
+  const normalizedEmail = norm(email);
+  if (!isEmail(normalizedEmail)) return;
+  const current = state.discoveredProfiles[normalizedEmail] || {};
+  state.discoveredProfiles[normalizedEmail] = {
+    first_name: String(patch.first_name || current.first_name || "").trim(),
+    last_name: String(patch.last_name || current.last_name || "").trim()
+  };
+}
+
+function collectProfileFromRow(row){
+  const values = Object.values(row || {});
+  const emailKeys = ["email", "email_address", "user_email", "primary_email"];
+  const firstKeys = ["first_name", "firstname", "given_name", "first"];
+  const lastKeys = ["last_name", "lastname", "family_name", "last"];
+  const nameKeys = ["display_name", "name", "full_name"];
+
+  const directEmail = emailKeys.map((k) => row?.[k]).find((v) => typeof v === "string" && isEmail(v));
+  if (directEmail) {
+    const displayName = nameKeys.map((k) => row?.[k]).find((v) => typeof v === "string" && v.trim());
+    const split = parseDisplayName(displayName);
+    const first = String(firstKeys.map((k) => row?.[k]).find((v) => typeof v === "string" && v.trim()) || split.first_name || "").trim();
+    const last = String(lastKeys.map((k) => row?.[k]).find((v) => typeof v === "string" && v.trim()) || split.last_name || "").trim();
+    mergeDiscoveredProfile(directEmail, { first_name: first, last_name: last });
+  }
+
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const match = value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig);
+    if (!match) continue;
+    for (const raw of match) mergeDiscoveredProfile(raw);
+  }
+}
+
+function extractNameFromAuthUser(user){
+  const meta = user?.user_metadata || {};
+  const appMeta = user?.app_metadata || {};
+  const first = String(meta.first_name || meta.firstName || meta.given_name || appMeta.first_name || "").trim();
+  const last = String(meta.last_name || meta.lastName || meta.family_name || appMeta.last_name || "").trim();
+  if (first || last) return { first_name: first, last_name: last };
+  return parseDisplayName(meta.name || meta.full_name || user?.name || "");
+}
+
+async function loadAuthUsers(){
+  state.authUsers = [];
+  state.authSource = "none";
+
+  const { data: rpcData, error: rpcError } = await sb.rpc("list_auth_users");
+  if (!rpcError && Array.isArray(rpcData)) {
+    state.authUsers = rpcData;
+    state.authSource = "rpc";
+    renderAuthSourceHint();
+    return;
+  }
+
+  const { data: fnData, error: fnError } = await sb.functions.invoke("admin-list-users", { body: {} });
+  if (!fnError && Array.isArray(fnData?.users)) {
+    state.authUsers = fnData.users;
+    state.authSource = "edge";
+  }
+
+  renderAuthSourceHint();
+}
+
+async function discoverUsers(){
+  state.discoveredProfiles = {};
+
+  for (const user of state.authUsers || []) {
+    const email = user?.email || user?.user_email || "";
+    mergeDiscoveredProfile(email, extractNameFromAuthUser(user));
+  }
+
+  const sourceTables = ["notes", "profiles", "user_profiles", "users", "members", "accounts"];
+  for (const tableName of sourceTables) {
+    const { data, error } = await sb.from(tableName).select("*").limit(1000);
+    if (error || !Array.isArray(data)) continue;
+    for (const row of data) collectProfileFromRow(row);
+  }
+
+  state.discoveredUsers = Object.keys(state.discoveredProfiles);
+}
+function renderAuthSourceHint(){
+  const hint = $("authSourceHint");
+  if (!hint) return;
+  if (state.authSource === "rpc") {
+    hint.textContent = "Supabase Auth linked via RPC: list_auth_users.";
+  } else if (state.authSource === "edge") {
+    hint.textContent = "Supabase Auth linked via Edge Function: admin-list-users.";
+  } else {
+    hint.textContent = "Supabase Auth direct listing is not configured. To show all auth users, add RPC list_auth_users or Edge Function admin-list-users.";
+  }
+}
+
+async function loadDirectoryUsers(){
+  const { data, error } = await sb.from("notes").select("*").eq("title", USER_DIRECTORY_TITLE).order("updated_at", { ascending: false }).limit(1);
+  if (error) {
+    state.directoryUsers = [];
+    state.directoryRecord = null;
+    return;
+  }
+
+  const row = (data || [])[0] || null;
+  state.directoryRecord = row;
+  if (!row?.body) {
+    state.directoryUsers = [];
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(row.body);
+    const users = Array.isArray(parsed?.users) ? parsed.users : [];
+    state.directoryUsers = users
+      .map((user) => ({
+        email: norm(user?.email),
+        first_name: String(user?.first_name || "").trim(),
+        last_name: String(user?.last_name || "").trim()
+      }))
+      .filter((user) => isEmail(user.email));
+  } catch {
+    state.directoryUsers = [];
+  }
+}
+
+async function saveDirectoryUsers(){
+  const users = Object.entries(state.config.profiles || {})
+    .map(([email, profile]) => ({
+      email: norm(email),
+      first_name: String(profile?.first_name || "").trim(),
+      last_name: String(profile?.last_name || "").trim()
+    }))
+    .filter((user) => isEmail(user.email));
+
+  const row = {
+    title: USER_DIRECTORY_TITLE,
+    body: JSON.stringify({ users }),
+    entry_type: "notes",
+    author: "System",
+    tags: ["system", "users"],
+    event_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    workspace_id: null
+  };
+
+  let error;
+  if (state.directoryRecord?.id) {
+    ({ error } = await sb.from("notes").update(row).eq("id", state.directoryRecord.id));
+    if (error) {
+      row.id = crypto.randomUUID();
+      ({ error } = await sb.from("notes").insert(row));
+    }
+  } else {
+    row.id = crypto.randomUUID();
+    ({ error } = await sb.from("notes").insert(row));
+  }
+  if (error) throw error;
+  await loadDirectoryUsers();
+}
+
+function mergeConfig(raw={}){
+  state.config={
+    admins:Array.from(new Set([...(raw.admins||[]).map(norm),SUPER_ADMIN_EMAIL])),
+    disabled:Array.from(new Set((raw.disabled||[]).map(norm))).filter((e)=>!isSuper(e)),
+    profiles:typeof raw.profiles==="object"&&raw.profiles?raw.profiles:{}
+  };
+
+  if(!state.config.profiles[SUPER_ADMIN_EMAIL]){
+    state.config.profiles[SUPER_ADMIN_EMAIL]={ first_name:"Jimmy", last_name:"Versical" };
+  }
+}
+
+async function loadConfig(){
+  const {data,error}=await sb.from("notes").select("*").eq("title",ROLE_CONFIG_TITLE).order("updated_at",{ascending:false}).limit(1);
+  if(error) throw error;
+  const row=(data||[])[0]||null;
+  state.record=row;
+  if(!row?.body){mergeConfig({});return;}
+  try{mergeConfig(JSON.parse(row.body));}catch{mergeConfig({});}
+}
+
+async function saveConfig(){
+  const payload={admins:state.config.admins,disabled:state.config.disabled,profiles:state.config.profiles};
+  const row={
+    title:ROLE_CONFIG_TITLE,
+    body:JSON.stringify(payload),
+    entry_type:"notes",
+    author:"System",
+    tags:["system","roles"],
+    event_at:new Date().toISOString(),
+    updated_at:new Date().toISOString(),
+    workspace_id:null
+  };
+
+  let error;
+  if(state.record?.id){
+    ({error}=await sb.from("notes").update(row).eq("id",state.record.id));
+    if(error){
+      row.id=crypto.randomUUID();
+      ({error}=await sb.from("notes").insert(row));
+    }
+  }
+  else {
+    row.id=crypto.randomUUID();
+    ({error}=await sb.from("notes").insert(row));
+  }
+  if(error) throw error;
+  await loadConfig();
+  await saveDirectoryUsers();
+}
+
+function renderUsers(){
+  const rows=[];
+  for (const user of state.directoryUsers || []) {
+    const email = norm(user?.email);
+    if (!email) continue;
+    const current = state.config.profiles[email] || {};
+    state.config.profiles[email] = {
+      ...current,
+      first_name: String(current.first_name || user.first_name || "").trim(),
+      last_name: String(current.last_name || user.last_name || "").trim()
+    };
+  }
+
+  for (const [email, profile] of Object.entries(state.discoveredProfiles || {})) {
+    if (!isEmail(email)) continue;
+    const current = state.config.profiles[email] || {};
+    state.config.profiles[email] = {
+      ...current,
+      first_name: String(current.first_name || profile.first_name || "").trim(),
+      last_name: String(current.last_name || profile.last_name || "").trim()
+    };
+  }
+
+  const emails=new Set([SUPER_ADMIN_EMAIL,...Object.keys(state.config.profiles||{}),...(state.config.admins||[]),...(state.config.disabled||[]),...(state.discoveredUsers||[]),...(state.directoryUsers||[]).map((u)=>norm(u?.email)),norm(state.user?.email)]);
+  for(const email of Array.from(emails).sort()){
+    if(!email) continue;
+    const p=state.config.profiles[email]||{};
+    const defaultFirst=isSuper(email)?"Jimmy":"";
+    const defaultLast=isSuper(email)?"Versical":"";
+    const firstName=String(p.first_name||defaultFirst||"").trim();
+    const lastName=String(p.last_name||defaultLast||"").trim();
+    const role=isAdmin(email)?"admin":"user";
+    const active=isSuper(email)?"active":((state.config.disabled||[]).includes(email)?"removed":"active");
+    const lock=isSuper(email)?"disabled":"";
+    rows.push(`<tr>
+      <td>${esc(email)}</td>
+      <td><input data-email="${esc(email)}" data-field="first_name" value="${esc(firstName)}" ${lock}></td>
+      <td><input data-email="${esc(email)}" data-field="last_name" value="${esc(lastName)}" ${lock}></td>
+      <td>
+        <select data-email="${esc(email)}" data-field="role" ${lock}>
+          <option value="user" ${role==="user"?"selected":""}>user</option>
+          <option value="admin" ${role==="admin"?"selected":""}>admin</option>
+        </select>
+      </td>
+      <td>${active}</td>
+      <td class="split actions-cell">
+        <button type="button" data-action="save" data-email="${esc(email)}" ${lock}>Save</button>
+        <button type="button" data-action="reset" data-email="${esc(email)}">Send Reset</button>
+        <button type="button" class="danger" data-action="remove" data-email="${esc(email)}" ${lock}>Remove</button>
+        <button type="button" data-action="delete" data-email="${esc(email)}" ${lock}>Delete</button>
+      </td>
+    </tr>`);
+  }
+  $("usersBody").innerHTML=rows.join("")||'<tr><td colspan="6" class="muted">No users found.</td></tr>';
+
+  $("usersBody").querySelectorAll("button[data-action]").forEach((b)=>b.onclick=()=>handleRowAction(b.dataset.action,norm(b.dataset.email),b));
+}
+
+async function handleRowAction(action,email,btn){
+  if(!email) return;
+
+  try {
+    if(action==="reset"){
+      msg("Sending reset email...");
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:`${window.location.origin}/login`});
+      if(error) return msg(error.message,"error");
+      return msg(`Reset email sent to ${email}.`,"ok");
+    }
+
+    if(action==="remove"){
+      if(isSuper(email)) return msg("Super admin cannot be removed.","error");
+      if(!confirm(`Remove ${email} from app access?`)) return;
+      state.config.disabled=Array.from(new Set([...(state.config.disabled||[]),email]));
+      state.config.admins=(state.config.admins||[]).filter((x)=>norm(x)!==email);
+      await saveConfig();
+      renderUsers();
+      return msg(`${email} removed from app access.`,"ok");
+    }
+
+    if(action==="delete"){
+      if(isSuper(email)) return msg("Super admin cannot be deleted.","error");
+      if(!confirm(`Delete ${email} from this admin list?`)) return;
+      state.config.disabled=(state.config.disabled||[]).filter((x)=>norm(x)!==email);
+      state.config.admins=(state.config.admins||[]).filter((x)=>norm(x)!==email);
+      delete state.config.profiles[email];
+      await saveConfig();
+      renderUsers();
+      return msg(`${email} deleted from the admin list.`,"ok");
+    }
+
+    if(action==="save"){
+      const row = btn?.closest("tr");
+      const roleSel=row?.querySelector('select[data-field="role"]');
+      const firstInput=row?.querySelector('input[data-field="first_name"]');
+      const lastInput=row?.querySelector('input[data-field="last_name"]');
+      const first_name=String(firstInput?.value||"").trim();
+      const last_name=String(lastInput?.value||"").trim();
+
+      state.config.profiles[email]={...(state.config.profiles[email]||{}),first_name,last_name};
+      state.config.disabled=(state.config.disabled||[]).filter((x)=>norm(x)!==email);
+
+      if(roleSel?.value==="admin"){
+        state.config.admins=Array.from(new Set([...(state.config.admins||[]),email]));
+      } else if(!isSuper(email)) {
+        state.config.admins=(state.config.admins||[]).filter((x)=>norm(x)!==email);
+      }
+
+      await saveConfig();
+      await loadAuthUsers();
+      await discoverUsers();
+      renderUsers();
+      return msg(`Updated ${email}.`,"ok");
+    }
+  } catch (err) {
+    return msg(String(err?.message || err || "Permission update failed."),"error");
+  }
+}
+
+async function requireSession(){
+  const {data,error}=await sb.auth.getSession();
+  if(error||!data.session?.user){window.location.href="login.html";return false;}
+  state.user=data.session.user;
+  state.session=data.session;
+  $("whoami").textContent=`Signed in as ${state.user.email||"Unknown"}`;
+  await loadConfig();
+  return true;
+}
+
+$("createForm").onsubmit=async(e)=>{
+  e.preventDefault();
+  const first=$("newFirst").value.trim();
+  const last=$("newLast").value.trim();
+  const email=norm($("newEmail").value);
+  const password=$("newPassword").value;
+  const role=$("newRole").value;
+  if(!first||!last||!email||password.length<6) return msg("First, last, email, and password (6+) are required.","error");
+
+  msg("Creating account...");
+  const {data,error}=await sb.auth.signUp({
+    email,password,
+    options:{emailRedirectTo:`${window.location.origin}/login`,data:{first_name:first,last_name:last,role:"user",app_role:"user"}}
+  });
+  if(error) return msg(error.message,"error");
+
+  state.config.profiles[email]={first_name:first,last_name:last};
+  state.config.disabled=(state.config.disabled||[]).filter((x)=>norm(x)!==email);
+  if(role==="admin") state.config.admins=Array.from(new Set([...(state.config.admins||[]),email]));
+  await saveConfig();
+
+  if(state.session?.access_token&&state.session?.refresh_token){
+    await sb.auth.setSession({access_token:state.session.access_token,refresh_token:state.session.refresh_token});
+  }
+
+  $("createForm").reset();
+  await discoverUsers();
+  renderUsers();
+  msg(`Account created for ${email}. Confirmation email sent if required.`,"ok");
+};
+
+$("refreshBtn").onclick=async()=>{await loadConfig();await loadDirectoryUsers();await loadAuthUsers();await discoverUsers();renderUsers();msg("Refreshed.","ok")};
+$("backBtn").onclick=()=>window.location.href="index.html";
+$("logoutBtn").onclick=async()=>{await sb.auth.signOut();window.location.href="login.html"};
+
+(async()=>{
+  const ok=await requireSession();
+  if(!ok) return;
+  await loadDirectoryUsers();
+  await loadAuthUsers();
+  await discoverUsers();
+  renderUsers();
+})();
+</script>
+</body>
+</html>
