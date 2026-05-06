@@ -57,15 +57,18 @@
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
     .grid2 { display:grid; grid-template-columns:1fr; gap:14px; }
-    .overview-grid { grid-template-columns:1fr; }
+    .overview-grid { grid-template-columns:1fr; align-items:start; }
+    .overview-forecast-card { grid-column:1 / -1; }
+    .overview-wide { grid-column:1 / -1; }
+    #overviewForecast { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
     .grid3 { display:grid; grid-template-columns:1fr; gap:14px; }
     .doc-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
     .doc-row:first-child { border-top:none; }
     .doc-meta { display:flex; flex-direction:column; gap:2px; min-width:0; }
     .doc-name { font-weight:600; word-break:break-word; }
     .doc-actions { display:flex; gap:8px; align-items:center; }
-    @media (min-width:900px){ .grid2{grid-template-columns:1fr 1fr;} .grid3{grid-template-columns:repeat(3,1fr);} .overview-grid{grid-template-columns:repeat(2,minmax(320px,1fr));} }
-    @media (min-width:1300px){ .overview-grid{grid-template-columns:repeat(3,minmax(300px,1fr));} }
+    @media (min-width:700px){ .overview-grid{grid-template-columns:repeat(2,minmax(260px,1fr));} }
+    @media (min-width:900px){ .grid2{grid-template-columns:1fr 1fr;} .grid3{grid-template-columns:repeat(3,1fr);} .overview-grid{grid-template-columns:repeat(2,minmax(320px,1fr));} #overviewForecast{grid-template-columns:repeat(5,minmax(0,1fr));} }
     @media (max-width:700px){ .bar{flex-direction:column;align-items:flex-start;gap:10px;} .user-controls{width:100%;justify-content:space-between;} .brand-title{font-size:1.3rem;} .logo-badge{width:44px;height:44px;} .tab-btn{padding:10px 10px;font-size:.95rem;} .container{padding:12px 10px 20px;} .card{padding:14px;} .split>*{min-width:100px;} table{font-size:.9rem;} }
     .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow); }
     .head { font-size:1rem; text-transform:uppercase; letter-spacing:.09em; color:#787467; margin:0 0 10px; font-weight:700; }
@@ -127,7 +130,6 @@
       <button class="tab-btn" data-tab="schedule">Schedule</button>
       <button class="tab-btn" data-tab="activity">Activity Feed</button>
       <button class="tab-btn" data-tab="requests">Requests</button>
-      <button class="tab-btn" data-tab="property">Property</button>
       <button class="tab-btn" data-tab="documents">Documents</button>
       <button id="adminTabBtn" class="tab-btn hidden" data-tab="admin">Admin</button>
     </nav>
@@ -142,37 +144,35 @@
           <div id="currentWeatherMeta" class="muted">Loading current weather...</div>
         </article>
         <article class="card">
-          <h2 class="head">Next Visit</h2>
-          <div id="overviewNextVisit" style="font-size:1.4rem;font-weight:700;">No upcoming reservation</div>
-          <div id="overviewNextDates" class="muted" style="margin-top:4px;"></div>
-          <h3 class="head" style="margin-top:18px;">Upcoming Reservations</h3>
-          <div id="overviewUpcoming" class="mini-list"></div>
-        </article>
-        <article class="card">
-          <div class="top"><h2 class="head" style="margin:0;">Open Activity Items</h2><span id="overviewActivityIssueCount" class="muted">0 items</span></div>
-          <div class="schedule-wrap"><div id="overviewActivityIssues"></div></div>
-        </article>
-        <article class="card">
           <div class="top"><h2 class="head" style="margin:0;">Open Requests</h2><span id="overviewRequestCount" class="muted">0 items</span></div>
           <div class="schedule-wrap"><div id="overviewRequests"></div></div>
-        </article>
-        <article class="card">
-          <div class="top"><h2 class="head" style="margin:0;">7-Day Forecast</h2><span class="muted">Curran, MI</span></div>
-          <div id="overviewForecast" class="grid3"></div>
-          <div id="tripForecastNote" class="muted" style="margin-top:10px;"></div>
-        </article>
-        <article class="card">
-          <h2 class="head">Property at a Glance</h2>
-          <div class="grid2">
-            <div class="card" style="padding:12px;"><div class="head" style="font-size:.9rem;">Well</div><div style="font-size:2rem;color:#587d4a;font-weight:700;">OK</div><div class="muted">42 PSI</div></div>
-            <div class="card" style="padding:12px;"><div class="head" style="font-size:.9rem;">Cameras</div><div style="font-size:2rem;color:#866c3d;font-weight:700;">4/4</div><div class="muted">All online</div></div>
-          </div>
         </article>
         <article class="card">
           <div class="top"><h2 class="head" style="margin:0;">MI DNR Hunting Seasons (Curran area)</h2><a href="https://www.michigan.gov/dnr/things-to-do/hunting/hunting-season-calendar" target="_blank" rel="noreferrer" class="calendar-link">Source</a></div>
           <div class="muted" style="margin-top:8px;"><strong>In season:</strong> <span id="seasonCurrent">Loading…</span></div>
           <div class="muted" style="margin-top:6px;"><strong>Upcoming (30 days):</strong> <span id="seasonUpcoming">Loading…</span></div>
         </article>
+        
+        
+        <article class="card">
+          <div class="top"><h2 class="head" style="margin:0;">Open Activity Items</h2><span id="overviewActivityIssueCount" class="muted">0 items</span></div>
+          <div class="schedule-wrap"><div id="overviewActivityIssues"></div></div>
+        </article>
+        <article class="card overview-wide">
+          <h2 class="head">Next Visit</h2>
+          <div id="overviewNextVisit" style="font-size:1.4rem;font-weight:700;">No upcoming reservation</div>
+          <div id="overviewNextDates" class="muted" style="margin-top:4px;"></div>
+          <h3 class="head" style="margin-top:18px;">Upcoming Reservations</h3>
+          <div id="overviewUpcoming" class="mini-list"></div>
+        </article>
+        
+        <article class="card overview-forecast-card">
+          <div class="top"><h2 class="head" style="margin:0;">10-Day Forecast</h2><span class="muted">Curran, MI</span></div>
+          <div id="overviewForecast"></div>
+          <div id="tripForecastNote" class="muted" style="margin-top:10px;"></div>
+        </article>
+        
+        
       </div>
     </section>
 
@@ -190,7 +190,8 @@
           <label>End Date<input id="resEnd" type="date" /></label>
           <label>Your Name<input id="resName" placeholder="Enter your name" /></label>
         </div>
-        <div class="split" style="margin-top:10px;"><button id="reserveBtn" class="primary">Reserve Dates</button></div>
+        <input id="editingReservationId" type="hidden" />
+        <div class="split" style="margin-top:10px;"><button id="reserveBtn" class="primary">Reserve Dates</button><button id="cancelReservationEditBtn" class="hidden">Cancel Edit</button></div>
         <div id="reserveMsg" class="muted" style="margin-top:8px;"></div>
       </section>
     </section>
@@ -267,13 +268,6 @@
       </section>
     </section>
 
-    <section class="tab-panel" data-panel="property">
-      <div class="grid2">
-        <section class="card"><h2 class="head">Security Cameras</h2><div class="muted">Camera health and snapshots will appear here.</div></section>
-        <section class="card"><h2 class="head">Well & Water</h2><div style="font-size:2rem;color:#587d4a;font-weight:700;">Online</div><div class="muted">Pressure: 42 PSI — normal range</div></section>
-      </div>
-    </section>
-
     <section class="tab-panel" data-panel="documents">
       <section class="card">
         <div class="top"><h2 class="head" style="margin:0;">Documents</h2><span class="muted">Upload / Download (Max 20MB)</span></div>
@@ -328,6 +322,7 @@ const CATEGORIES = ["general maintenance","suggestions","equipment","hunting","w
 const RESERVATION_KEY = "shiawassee_cabin_reservations_v1";
 const REQUESTS_KEY = "shiawassee_requests_v1";
 const ACTIVITY_LOCAL_KEY = "shiawassee_activity_local_v1";
+const RESERVATION_HISTORY_DAYS = 90;
 const LAT = 44.74;
 const LON = -83.77;
 const ADMIN_EMAILS = ["admin@shiawasseeranch.com"];
@@ -460,6 +455,28 @@ function weatherIcon(code) {
   return "🌡️";
 }
 
+function moonPhaseIcon(phase) {
+  const p = Number(phase);
+  if (!Number.isFinite(p)) return "🌙";
+  if (p <= 0.03 || p >= 0.97) return "🌑";
+  if (p < 0.22) return "🌒";
+  if (p < 0.28) return "🌓";
+  if (p < 0.47) return "🌔";
+  if (p < 0.53) return "🌕";
+  if (p < 0.72) return "🌖";
+  if (p < 0.78) return "🌗";
+  return "🌘";
+}
+
+function estimateMoonPhase(dateIso) {
+  const d = new Date(`${dateIso}T12:00:00Z`);
+  const synodicMonth = 29.53058867;
+  const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14, 0);
+  const days = (d.getTime() - knownNewMoon) / 86400000;
+  const normalized = ((days % synodicMonth) + synodicMonth) % synodicMonth;
+  return normalized / synodicMonth;
+}
+
 function degreesToCompass(deg) {
   const value = Number(deg);
   if (!Number.isFinite(value)) return "--";
@@ -545,7 +562,7 @@ function renderOverview() {
       const fireRisk = fireRiskLabel(daily.temperature_2m_max?.[i], windMax, humidity);
       const clouds = Number(daily.cloud_cover_mean[i] ?? 100);
       const star = clouds <= 30 ? "Great" : clouds <= 60 ? "Fair" : "Poor";
-      return `<div class="card" style="padding:10px;"><strong>${new Date(`${d}T12:00:00`).toLocaleDateString(undefined,{weekday:"short",month:"numeric",day:"numeric"})}</strong><div style="font-size:1.35rem;">${icon}</div><div>${Math.round(daily.temperature_2m_max[i])}°F / ${Math.round(daily.temperature_2m_min[i])}°F</div><div class="muted">Wind ${Math.round(windMax)} mph ${windDir}</div><div class="muted">Sunrise ${sunrise}</div><div class="muted">Sunset ${sunset}</div><div class="muted">Fire Risk: ${fireRisk}</div><div class="muted">Stargazing: ${star}</div></div>`;
+      return `<div class="card" style="padding:10px;"><strong>${new Date(`${d}T12:00:00`).toLocaleDateString(undefined,{weekday:"short",month:"numeric",day:"numeric"})}</strong><div style="font-size:1.35rem;">${icon}</div><div>${Math.round(daily.temperature_2m_max[i])}°F / ${Math.round(daily.temperature_2m_min[i])}°F</div><div class="muted">Wind ${Math.round(windMax)} mph ${windDir}</div><div class="muted">Sunrise ${sunrise}</div><div class="muted">Sunset ${sunset}</div><div class="muted">Fire Risk: ${fireRisk}</div><div class="muted">Moon ${moonPhaseIcon(Number(daily.moon_phase?.[i]))}</div><div class="muted">Stargazing: ${star}</div></div>`;
     }).join("");
     $("overviewForecast").innerHTML = cards;
   } else {
@@ -633,7 +650,17 @@ function loadReservations() {
   } catch {
     state.reservations = [];
   }
+  pruneOldCompletedReservations();
   renderOverview();
+}
+
+function pruneOldCompletedReservations() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - RESERVATION_HISTORY_DAYS);
+  const cutoffIso = cutoff.toISOString().slice(0,10);
+  const before = state.reservations.length;
+  state.reservations = state.reservations.filter((r) => r.end >= cutoffIso);
+  if (before !== state.reservations.length) saveReservations();
 }
 
 function saveReservations() {
@@ -897,11 +924,14 @@ async function uploadDocument() {
 }
 
 async function loadWeather() {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,cloud_cover_mean,wind_speed_10m_max,wind_direction_10m_dominant&forecast_days=7&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=America%2FDetroit`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,cloud_cover_mean,wind_speed_10m_max,wind_direction_10m_dominant&forecast_days=10&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=America%2FDetroit`;
   try {
     const res = await fetch(url);
     const data = await res.json();
     state.weather = data?.daily || null;
+    if (state.weather?.time?.length && !state.weather.moon_phase) {
+      state.weather.moon_phase = state.weather.time.map((d) => estimateMoonPhase(d));
+    }
     state.currentWeather = data?.current || null;
   } catch {
     state.weather = null;
@@ -927,9 +957,37 @@ function renderSchedule() {
     const rangeLabel = r.start === r.end ? startLabel : `${startLabel} - ${endLabel}`;
     const status = r.end < today() ? "Completed" : "Reserved";
     const statusClass = status === "Completed" ? "muted" : "status-reserved";
-    return `<tr><td>${rangeLabel}</td><td class="${statusClass}">${status}</td><td>${esc(r.name)}</td></tr>`;
+    return `<tr><td>${rangeLabel}</td><td class="${statusClass}">${status}</td><td>${esc(r.name)}</td><td><button class="tiny-btn" data-res-edit="${esc(r.id || "")}">Edit</button> <button class="tiny-btn danger" data-res-delete="${esc(r.id || "")}">Delete</button></td></tr>`;
   }).join("");
-  view.innerHTML = `<table><thead><tr><th>Date Range</th><th>Status</th><th>Reserved By</th></tr></thead><tbody>${rows}</tbody></table>`;
+  view.innerHTML = `<table><thead><tr><th>Date Range</th><th>Status</th><th>Reserved By</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+  view.querySelectorAll("button[data-res-delete]").forEach((btn) => btn.onclick = () => deleteReservation(btn.dataset.resDelete));
+  view.querySelectorAll("button[data-res-edit]").forEach((btn) => btn.onclick = () => editReservation(btn.dataset.resEdit));
+}
+
+
+function editReservation(id) {
+  const reservation = state.reservations.find((r) => r.id === id);
+  if (!reservation) return;
+  $("resStart").value = reservation.start;
+  $("resEnd").value = reservation.end;
+  $("resName").value = reservation.name;
+  $("editingReservationId").value = reservation.id;
+  $("reserveBtn").textContent = "Update Reservation";
+  $("cancelReservationEditBtn").classList.remove("hidden");
+}
+
+function clearReservationEditor() {
+  $("editingReservationId").value = "";
+  $("reserveBtn").textContent = "Reserve Dates";
+  $("cancelReservationEditBtn").classList.add("hidden");
+}
+
+function deleteReservation(id) {
+  state.reservations = state.reservations.filter((r) => r.id !== id);
+  saveReservations();
+  renderSchedule();
+  renderOverview();
+  if ($("editingReservationId").value === id) clearReservationEditor();
 }
 
 function renderCalendarPopup() {
@@ -984,6 +1042,7 @@ function reserveDates() {
   const start = $("resStart").value;
   const end = $("resEnd").value;
   const name = $("resName").value.trim() || $("author").value.trim();
+  const editingId = $("editingReservationId").value || "";
 
   const min = today();
   const max = maxReservationDate();
@@ -994,19 +1053,24 @@ function reserveDates() {
   if (end < start) return setReserveMsg("End date must be on or after the start date.", "error");
 
   const dates = eachDateInRange(start, end);
-  const conflict = dates.find((d) => getReservationForDate(d));
+  const conflict = dates.find((d) => { const existing = getReservationForDate(d); return existing && existing.id !== editingId; });
   if (conflict) {
     const existing = getReservationForDate(conflict);
     return setReserveMsg(`Date conflict: ${conflict} is already reserved by ${existing?.name || "another user"}.`, "error");
   }
 
-  state.reservations.push({ start, end, name });
+  if (editingId) {
+    const existing = state.reservations.find((r) => r.id === editingId);
+    if (existing) { existing.start = start; existing.end = end; existing.name = name; }
+  } else {
+    state.reservations.push({ id: crypto.randomUUID(), start, end, name });
+  }
   state.reservations.sort((a,b) => a.start.localeCompare(b.start));
   saveReservations();
   renderSchedule();
   renderOverview();
-  setReserveMsg("Reservation saved.", "ok");
-  $("resName").value = "";
+  setReserveMsg(editingId ? "Reservation updated." : "Reservation saved.", "ok");
+  clearReservationEditor();
 }
 
 function initReservationInputs() {
@@ -1018,6 +1082,7 @@ function initReservationInputs() {
   $("resEnd").max = max;
   $("resStart").value = min;
   $("resEnd").value = min;
+  clearReservationEditor();
 }
 
 function formatPhotoUploadError(err) {
@@ -1426,6 +1491,7 @@ function initCategoryOptions() {
   $("loadMoreBtn").onclick = () => { state.page += 1; applyView(); };
   $("exportBtn").onclick = exportCsv;
   $("reserveBtn").onclick = reserveDates;
+  $("cancelReservationEditBtn").onclick = clearReservationEditor;
   $("openCalendarLink").onclick = (e) => { e.preventDefault(); openCalendarPopup(); };
   $("closeCalendarBtn").onclick = closeCalendarPopup;
   $("newRequestBtn").onclick = () => $("newRequestForm").classList.toggle("hidden");

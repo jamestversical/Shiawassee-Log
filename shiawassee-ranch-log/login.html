@@ -16,6 +16,7 @@
 --muted:#76756d;
 --accent:#6b874f;
 --accent2:#4f6739;
+--create:#60746c;
 --danger:#b4423a;
 --shadow:0 10px 26px rgba(45,40,29,.10);
 --top:#222622;
@@ -51,6 +52,7 @@ padding:16px;
 .tabs button{flex:1;}
 .tabs button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
 .tabs button:not(.primary){background:#f4f2eb;}
+.tabs button.create-account{background:var(--create);border-color:var(--create);color:#fff;}
 .card{
 width:100%;
 background:var(--card);
@@ -112,7 +114,7 @@ background:#f4f2eb;
 
 <div class="tabs">
 <button id="showSignInBtn" class="primary">Sign In</button>
-<button id="showSignUpBtn">Create Account</button>
+<button id="showSignUpBtn" class="create-account">Create Account</button>
 <button id="showForgotBtn">Forgot Password</button>
 </div>
 
@@ -123,6 +125,8 @@ background:#f4f2eb;
 </form>
 
 <form id="signUpForm" class="hidden">
+<label>First Name<input id="signUpFirstName" required></label>
+<label>Last Name<input id="signUpLastName" required></label>
 <label>Email<input id="signUpEmail" type="email" required></label>
 <label>Password<input id="signUpPassword" type="password" required></label>
 <button class="primary">Create Account</button>
@@ -179,15 +183,22 @@ window.location.href="index.html"
 $("signUpForm").onsubmit=async e=>{
 e.preventDefault()
 
+const firstName=$("signUpFirstName").value.trim()
+const lastName=$("signUpLastName").value.trim()
 const email=$("signUpEmail").value
 const password=$("signUpPassword").value
+
+if(!firstName || !lastName) return msg("First and last name are required.","error")
 
 msg("Creating account...")
 
 const {error}=await sb.auth.signUp({
 email,
 password,
-options:{emailRedirectTo:window.location.origin+"/login.html"}
+options:{
+emailRedirectTo:window.location.origin+"/login.html",
+data:{first_name:firstName,last_name:lastName}
+}
 })
 
 if(error)return msg(error.message,"error")
