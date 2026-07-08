@@ -280,7 +280,7 @@
 
     <section class="tab-panel" data-panel="documents">
       <section class="card">
-        <div class="top"><h2 class="head" style="margin:0;">Documents</h2><span class="muted">Upload / Download (Max 20MB)</span></div>
+        <div class="top"><h2 class="head" style="margin:0;">Documents</h2><span class="muted">Upload / Download (Max 8MB)</span></div>
         <div class="grid3" style="margin-top:8px;">
           <label>Choose File<input id="docFile" type="file" /></label>
           <div style="display:flex;align-items:flex-end;"><button id="uploadDocBtn" class="primary">Upload File</button></div>
@@ -326,7 +326,7 @@ const SUPABASE_URL = "https://gpbusqwvjjhpwitoovkd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8";
 const PHOTO_BUCKET = "log-photos";
 const DOCS_BUCKET = "documents";
-const MAX_DOC_SIZE_BYTES = 20 * 1024 * 1024;
+const MAX_DOC_SIZE_BYTES = 8 * 1024 * 1024;
 const PAGE_SIZE = 20;
 const CATEGORIES = ["general maintenance","suggestions","equipment","hunting","wildlife","shopping list","notes"];
 const RESERVATION_KEY = "shiawassee_cabin_reservations_v1";
@@ -988,7 +988,7 @@ async function uploadDocument() {
   const input = $("docFile");
   const file = input?.files?.[0];
   if (!file) return setDocMsg("Choose a file to upload.", "error");
-  if (file.size > MAX_DOC_SIZE_BYTES) return setDocMsg("File is too large. Maximum size is 20MB.", "error");
+  if (file.size > MAX_DOC_SIZE_BYTES) return setDocMsg("File is too large. Maximum size is 8MB.", "error");
   setDocMsg("Uploading...");
   const path = `${today()}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const { error } = await sb.storage.from(DOCS_BUCKET).upload(path, file, { upsert: false });
