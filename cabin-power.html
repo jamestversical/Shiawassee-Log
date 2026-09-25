@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Cabin Power</title>
+<style>
+  #cabinPower{
+    --ink:#24342d; --ink2:#3b4f45; --cream:#f7f7f1; --card:#ffffff;
+    --line:#e4e6de; --muted:#6b756e; --good:#2f8f5b; --warn:#c9911f; --bad:#c0432f;
+    --accent:#3b4f45;
+    /* Chart series: validated categorical slots 1 & 2. Identity is also carried
+       by the legend and the table, never by colour alone. */
+    --series-solar:#eb6834;
+    --series-used:#2a78d6;
+    --grid:#e8eae4;
+  }
+  #cabinPower *{box-sizing:border-box}
+  #cabinPower{margin:0;background:var(--cream);color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  #cabinPower.wrap{max-width:960px;margin:0 auto;padding:18px 16px 40px}
+  #cabinPower .head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  #cabinPower .badge{width:44px;height:44px;border-radius:12px;border:3px solid #f2f2eb;
+    background:linear-gradient(180deg,#3b4f45,#24342d);color:#fff;display:grid;place-items:center;
+    font-weight:700;font-size:18px;flex:0 0 auto}
+  #cabinPower h1{font-size:20px;margin:0}
+  #cabinPower .sub{color:var(--muted);font-size:12.5px;margin:2px 0 0}
+  #cabinPower .banner{margin:14px 0;padding:10px 14px;border-radius:10px;font-weight:600;display:none}
+  #cabinPower .banner.show{display:block}
+  #cabinPower .banner.offline{background:#fbeceb;color:var(--bad);border:1px solid #f0c8c2}
+  #cabinPower .banner.low{background:#fbf3e0;color:#8a6410;border:1px solid #eeddb0}
+  #cabinPower .grid{display:grid;gap:12px;margin-top:14px}
+  #cabinPower .row{display:grid;grid-template-columns:220px 1fr;gap:12px}
+  @media(max-width:720px){#cabinPower .row{grid-template-columns:1fr}}
+  #cabinPower .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  #cabinPower .card h2{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  #cabinPower .ring{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #cabinPower .ring svg{transform:rotate(-90deg)}
+  #cabinPower .ring .pct{font-size:34px;font-weight:800;line-height:1}
+  #cabinPower .ring .pctlabel{color:var(--muted);font-size:12px;margin-top:2px}
+  #cabinPower .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:620px){#cabinPower .stats{grid-template-columns:repeat(2,1fr)}}
+  #cabinPower .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  #cabinPower .stat .k{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em}
+  #cabinPower .stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  #cabinPower .stat .u{color:var(--muted);font-size:12px;font-weight:500}
+  #cabinPower .big{font-size:15px}
+  #cabinPower .days{font-size:40px;font-weight:800;line-height:1}
+  #cabinPower table{width:100%;border-collapse:collapse;font-size:13px}
+  #cabinPower th, #cabinPower td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+  #cabinPower th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase}
+  #cabinPower td.n, #cabinPower th.n{text-align:right;font-variant-numeric:tabular-nums}
+  #cabinPower .chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600}
+  #cabinPower .chip.sun{background:#fdf1cf;color:#8a6410}
+  #cabinPower .chip.part{background:#e7eef0;color:#3a5560}
+  #cabinPower .chip.over{background:#e6e8ea;color:#4b5560}
+  #cabinPower svg.chart{width:100%;height:auto;display:block;overflow:visible}
+  #cabinPower .legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+  #cabinPower .legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  #cabinPower .sw, #cabinPower .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:0 0 auto}
+  #cabinPower .hero{display:flex;gap:24px;flex-wrap:wrap;margin:0 0 10px}
+  #cabinPower .hero > div{display:flex;align-items:baseline;gap:7px}
+  #cabinPower .hero .hv{font-size:26px;font-weight:800;line-height:1}
+  #cabinPower .vizwrap{position:relative}
+  #cabinPower .tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;
+    border-radius:8px;font-size:12px;line-height:1.45;white-space:nowrap;opacity:0;
+    transition:opacity .12s;z-index:5;transform:translate(-50%,-115%)}
+  #cabinPower .tip.on{opacity:1}
+  #cabinPower .tablewrap{overflow-x:auto;margin-top:12px}
+  #cabinPower .today-cell{color:var(--muted);font-style:italic}
+  #cabinPower .foot{color:var(--muted);font-size:11.5px;margin-top:14px;text-align:center}
+  #cabinPower .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  #cabinPower .demo{background:#eef3ee;border:1px dashed #b9c9bd;color:#3b4f45;border-radius:10px;
+    padding:8px 12px;font-size:12px;margin-top:10px;display:none}
+  #cabinPower .demo.show{display:block}
+  /* Standalone/iframe only -- DELETE these two lines when pasting this
+     style block into the main site, so it can't restyle other pages. */
+  body{margin:0;background:#f7f7f1}
+</style>
+</head>
+<body>
+<div class="wrap" id="cabinPower">
+  <div class="head">
+    <div class="badge">SR</div>
+    <div>
+      <h1>Cabin Power</h1>
+      <div class="sub" id="cpUpdated">Loading…</div>
+    </div>
+  </div>
+
+  <div class="banner offline" id="cpOffline"></div>
+  <div class="banner low" id="cpLow"></div>
+  <div class="demo" id="cpDemo">Showing sample data — no live readings in Supabase yet. Once the collector runs, this fills with real numbers.</div>
+
+  <div class="row">
+    <div class="card ring">
+      <h2 style="align-self:flex-start">State of charge</h2>
+      <svg width="150" height="150" viewBox="0 0 150 150">
+        <circle cx="75" cy="75" r="62" fill="none" stroke="#eceee8" stroke-width="16"/>
+        <circle id="cpArc" cx="75" cy="75" r="62" fill="none" stroke="var(--good)" stroke-width="16"
+                stroke-linecap="round" stroke-dasharray="389.6" stroke-dashoffset="389.6"/>
+      </svg>
+      <div style="text-align:center;margin-top:-96px;pointer-events:none">
+        <div class="pct" id="cpSoc">–</div>
+        <div class="pctlabel">from JK BMS (CAN)</div>
+      </div>
+      <div style="height:78px"></div>
+      <div id="cpStatus" class="sub" style="text-align:center"></div>
+    </div>
+
+    <div class="grid" style="margin-top:0">
+      <div class="stats">
+        <div class="stat"><div class="k">Solar now</div><div class="v" id="cpPv">–<span class="u"> W</span></div></div>
+        <div class="stat"><div class="k">Cabin load</div><div class="v" id="cpLoad">–<span class="u"> W</span></div></div>
+        <div class="stat"><div class="k">Battery</div><div class="v" id="cpNet">–<span class="u"> W</span></div></div>
+        <div class="stat"><div class="k">Pack voltage</div><div class="v" id="cpVolt">–<span class="u"> V</span></div></div>
+      </div>
+      <div class="card">
+        <h2>Estimated runtime</h2>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <div class="days" id="cpDays">–</div>
+          <div class="big">days left <span class="sub" id="cpDaysBasis"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <div class="card" style="grid-column:1 / -1">
+      <h2>Daily energy — solar generated vs. cabin use</h2>
+      <div class="hero">
+        <div><span class="sw" style="background:var(--series-solar)"></span>
+             <span class="hv" id="cpGenToday">–</span><span class="u">kWh generated today</span></div>
+        <div><span class="sw" style="background:var(--series-used)"></span>
+             <span class="hv" id="cpUseToday">–</span><span class="u">kWh used today</span></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--series-solar)"></i>Solar generated</span>
+        <span><i class="sw" style="background:var(--series-used)"></i>Cabin use</span>
+        <span class="muted" id="cpTodayNote"></span>
+      </div>
+      <div class="vizwrap"><div id="cpEnergySvg"></div><div class="tip" id="cpTip"></div></div>
+      <div class="tablewrap">
+        <table id="cpDailyTable">
+          <thead><tr><th>Day</th><th class="n">Solar generated</th><th class="n">Cabin use</th><th class="n">Net</th></tr></thead>
+          <tbody><tr><td colspan="4" class="sub">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <div class="card" style="grid-column:1 / -1">
+      <h2>Battery state of charge — last 14 days</h2>
+      <div id="cpSocSvg"></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <div class="card">
+      <h2>Usage vs. occupancy</h2>
+      <table>
+        <tr><th>When</th><th class="n">Avg load / day</th></tr>
+        <tr><td><span class="dot" style="background:var(--ink2)"></span>Occupied days</td><td class="n" id="cpOcc">–</td></tr>
+        <tr><td><span class="dot" style="background:#b9c1bb"></span>Vacant days</td><td class="n" id="cpVac">–</td></tr>
+      </table>
+      <div class="sub" id="cpNextStay" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h2>Solar harvest vs. weather</h2>
+      <table>
+        <thead><tr><th>Sky</th><th class="n">Days</th><th class="n">Avg harvest</th></tr></thead>
+        <tbody id="cpWx"><tr><td colspan="3" class="sub">Loading weather…</td></tr></tbody>
+      </table>
+      <div class="sub" id="cpForecast" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="foot" id="cpFoot"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Everything is wrapped in an IIFE so that names like $, esc, sb, state and num
+// stay private. The main site already declares several of these at top level, and
+// a duplicate `const` would be a SyntaxError that kills the whole page.
+(function(){
+/* ================= CONFIG — set these ================= */
+const CONFIG = {
+  SUPABASE_URL: "https://gpbusqwvjjhpwitoovkd.supabase.co",
+  // Public anon key (same one already in your site source; safe to embed):
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYnVzcXd2ampocHdpdG9vdmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjQwNzgsImV4cCI6MjA4NzcwMDA3OH0.DyZZRZQ3X3onQh0Dxkcb1AdRq9Tcxf1XTUhR6nf3rQ8",
+  RESERVATIONS_TABLE: "reservations",
+  LAT: 44.74, LON: -83.77,
+  // Cabin's own timezone. Days must be bucketed in LOCAL time: the inverter's
+  // daily counters reset at local midnight and Open-Meteo returns local days.
+  // Using UTC here would smear each evening's readings into the next day.
+  TZ: "America/Detroit",
+  PACK_KWH: 16.1,          // full pack energy — 16S 314Ah LiFePO4 ≈ 51.2V × 314Ah ≈ 16.1 kWh
+  FLOOR_SOC: 15,           // "empty" reserve you don't want to go below
+  DEFAULT_DAILY_LOAD_KWH: 6.0, // fallback if we can't measure occupied usage yet
+  OFFLINE_MIN: 30,         // minutes with no new row => cabin/Starlink offline
+  LOW_SOC: 30, URGENT_SOC: 15
+};
+/* ====================================================== */
+
+const $ = id => document.getElementById(id);
+const fmt = (n,d=0)=> n==null||isNaN(n) ? "–" : Number(n).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+// YYYY-MM-DD in the CABIN's timezone (en-CA formats as ISO). Falls back to UTC
+// slicing if the runtime lacks full timezone data.
+function dayKey(d){
+  try { return new Date(d).toLocaleDateString("en-CA",{timeZone:CONFIG.TZ}); }
+  catch(e){ return new Date(d).toISOString().slice(0,10); }
+}
+// Step a YYYY-MM-DD string forward by n days using pure date arithmetic, so no
+// timezone can shift the result.
+function addDays(ds,n){
+  const [y,m,d]=ds.split("-").map(Number);
+  const t=new Date(Date.UTC(y,m-1,d)); t.setUTCDate(t.getUTCDate()+n);
+  return t.toISOString().slice(0,10);
+}
+
+// Reuse the page's existing Supabase client when there is one (set
+// `window.__cabinSb = sb;` once in the main page), otherwise make our own.
+// Reusing avoids a second GoTrueClient and guarantees we see the signed-in
+// session, which RLS needs in order to return any rows.
+let sb=null;
+try{
+  sb = window.__cabinSb
+    || window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+}catch(e){}
+
+async function load(){
+  let rows=[], reservations=[], usedDemo=false;
+  try{
+    const since = new Date(Date.now()-14*864e5).toISOString();
+    const r = await sb.from("cabin_telemetry").select("*").gte("captured_at",since)
+              .order("captured_at",{ascending:true}).limit(3000);
+    if(r.error) throw r.error;
+    rows = r.data||[];
+    const rr = await sb.from(CONFIG.RESERVATIONS_TABLE).select("*").limit(500);
+    reservations = (rr.data)||[];
+  }catch(e){ /* not signed in / table empty / offline */ }
+
+  if(!rows.length){ rows = sampleRows(); reservations = sampleReservations(); usedDemo=true; }
+  $("cpDemo").classList.toggle("show", usedDemo);
+
+  render(rows, reservations);
+  loadWeather(rows).catch(()=>{});
+}
+
+function render(rows, reservations){
+  const latest = rows[rows.length-1];
+  const soc = num(latest.soc);
+  // ---- SOC ring ----
+  const C = 2*Math.PI*62;
+  const pct = Math.max(0,Math.min(100, soc??0));
+  $("cpArc").style.strokeDashoffset = C*(1-pct/100);
+  $("cpArc").style.stroke = pct<=CONFIG.URGENT_SOC?"var(--bad)":pct<=CONFIG.LOW_SOC?"var(--warn)":"var(--good)";
+  $("cpSoc").textContent = soc==null?"–":Math.round(soc)+"%";
+  $("cpStatus").textContent = latest.status_text ? "Inverter: "+latest.status_text : "";
+
+  // ---- now stats ----
+  const pv=num(latest.pv_power_w), load=num(latest.load_power_w);
+  const chg=num(latest.charge_w), dis=num(latest.discharge_w);
+  let net = latest.battery_power_w!=null?num(latest.battery_power_w):(chg!=null||dis!=null?((chg||0)-(dis||0)):null);
+  $("cpPv").innerHTML = fmt(pv)+'<span class="u"> W</span>';
+  $("cpLoad").innerHTML = fmt(load)+'<span class="u"> W</span>';
+  const netTxt = net==null?"–":(net>=0?"+":"")+fmt(net);
+  $("cpNet").innerHTML = netTxt+'<span class="u"> W'+(net==null?"":(net>=0?" charging":" draining"))+'</span>';
+  $("cpVolt").innerHTML = fmt(num(latest.battery_voltage),1)+'<span class="u"> V</span>';
+
+  // ---- freshness / warnings ----
+  const ageMin = (Date.now()-new Date(latest.captured_at).getTime())/60000;
+  $("cpUpdated").textContent = "Updated "+timeago(ageMin)+" · "+new Date(latest.captured_at).toLocaleString();
+  const off = ageMin>CONFIG.OFFLINE_MIN;
+  $("cpOffline").classList.toggle("show",off);
+  if(off) $("cpOffline").textContent = "⚠ No data for "+Math.round(ageMin)+" min — the cabin dongle or Starlink may be offline.";
+  const low = soc!=null && soc<=CONFIG.LOW_SOC;
+  $("cpLow").classList.toggle("show",low && !off);
+  if(low) $("cpLow").textContent = (soc<=CONFIG.URGENT_SOC?"🔴 Urgent: ":"🟡 Warning: ")+"battery at "+Math.round(soc)+"%.";
+
+  // ---- occupancy usage ----
+  const occ = occupiedSet(reservations);
+  const byDay = dailyLoad(rows);
+  const occDays=[], vacDays=[];
+  Object.entries(byDay).forEach(([d,kwh])=>{ (occ.has(d)?occDays:vacDays).push(kwh); });
+  const avg = a=> a.length? a.reduce((x,y)=>x+y,0)/a.length : null;
+  const occAvg=avg(occDays), vacAvg=avg(vacDays);
+  $("cpOcc").textContent = occAvg==null?"–":fmt(occAvg,1)+" kWh";
+  $("cpVac").textContent = vacAvg==null?"–":fmt(vacAvg,1)+" kWh";
+  const next = nextStay(reservations);
+  $("cpNextStay").textContent = next? "Next stay: "+next.name+" — "+next.start+(next.end?" → "+next.end:"") : "No upcoming reservations.";
+
+  // ---- days remaining ----
+  const dailyForEstimate = occAvg || CONFIG.DEFAULT_DAILY_LOAD_KWH;
+  const usable = CONFIG.PACK_KWH * Math.max(0,(pct-CONFIG.FLOOR_SOC))/100;
+  const days = dailyForEstimate>0 ? usable/dailyForEstimate : null;
+  $("cpDays").textContent = days==null?"–":fmt(days,1);
+  $("cpDaysBasis").textContent = "at "+fmt(dailyForEstimate,1)+" kWh/day"+(occAvg?" (measured occupied)":" (default)");
+
+  renderDailyEnergy(rows);   // kWh: generated vs used (own axis)
+  renderSoc(rows);           // %:   state of charge  (own axis)
+  window.__cpDailyLoad = byDay;
+  window.__cpHarvest = dailyHarvest(rows);
+}
+
+/* ---------- helpers ---------- */
+function num(v){ return v==null||v===""||isNaN(v)?null:Number(v); }
+function timeago(min){ if(min<1)return"just now"; if(min<60)return Math.round(min)+" min ago";
+  const h=min/60; if(h<24)return Math.round(h)+" h ago"; return Math.round(h/24)+" d ago"; }
+function occupiedSet(res){ const s=new Set(); (res||[]).forEach(r=>{
+  const a=(r.start_date||r.start||"").slice(0,10), b=(r.end_date||r.end||a).slice(0,10);
+  if(!a) return;
+  // Reservation dates are already plain calendar dates -- walk them as strings
+  // so no Date/timezone conversion can shift a stay by a day.
+  let c=a, guard=0;
+  while(c<=(b||a) && guard++<400){ s.add(c); c=addDays(c,1); } }); return s; }
+function nextStay(res){ const now=dayKey(new Date());
+  return (res||[]).map(r=>({name:r.name||r.reserved_by||"Someone",start:(r.start_date||r.start||"").slice(0,10),end:(r.end_date||r.end||"").slice(0,10)}))
+    .filter(r=>r.start && r.start>=now).sort((a,b)=>a.start.localeCompare(b.start))[0]; }
+function dailyLoad(rows){ // peak today_load_kwh per day ≈ that day's total consumption
+  const m={}; rows.forEach(r=>{ const d=dayKey(r.captured_at); const v=num(r.today_load_kwh);
+    if(v!=null) m[d]=Math.max(m[d]||0, v); }); return m; }
+
+/* ---------- daily energy: generated vs used ---------- */
+// Daily totals come from the inverter's own running counters, which reset at
+// local midnight -- so the day's total is the highest value seen that day.
+function dailySeries(rows){
+  const gen={}, use={};
+  rows.forEach(r=>{
+    const d=dayKey(r.captured_at), g=num(r.today_pv_kwh), u=num(r.today_load_kwh);
+    if(g!=null) gen[d]=Math.max(gen[d]||0,g);
+    if(u!=null) use[d]=Math.max(use[d]||0,u);
+  });
+  const days=[...new Set([...Object.keys(gen),...Object.keys(use)])].sort();
+  return {days,gen,use};
+}
+const esc = s => String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const shortDay = ds => { const [y,m,d]=ds.split("-").map(Number);
+  return new Date(Date.UTC(y,m-1,d)).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}); };
+// Bar with rounded top corners, square at the baseline.
+function barPath(x,y,w,h,r){
+  r=Math.max(0,Math.min(r,w/2,h));
+  return `M${x} ${y+h} L${x} ${y+r} Q${x} ${y} ${x+r} ${y} L${x+w-r} ${y} Q${x+w} ${y} ${x+w} ${y+r} L${x+w} ${y+h} Z`;
+}
+function niceMax(v){ if(v<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(v)));
+  return Math.ceil(v/p*2)/2*p; }
+
+function renderDailyEnergy(rows){
+  const {days,gen,use}=dailySeries(rows);
+  const last=days.slice(-14), today=dayKey(new Date());
+
+  $("cpGenToday").textContent = gen[today]==null?"–":fmt(gen[today],1);
+  $("cpUseToday").textContent = use[today]==null?"–":fmt(use[today],1);
+  $("cpTodayNote").textContent = last.includes(today) ? "· today still counting" : "";
+
+  // ---- grouped bar chart (single axis: kWh) ----
+  const W=900,H=230, L=42,R=10,T=10,B=28;
+  const pw=W-L-R, ph=H-T-B;
+  const max=niceMax(Math.max(0.5,...last.map(d=>Math.max(gen[d]||0,use[d]||0))));
+  const gw=last.length?pw/last.length:pw;
+  const bw=Math.max(2,(gw-8)/2-1);              // 2px surface gap between the pair
+  const yOf=v=>T+ph-(v/max)*ph;
+
+  let g=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" preserveAspectRatio="xMidYMid meet"
+    aria-label="Daily solar generated versus cabin use, last ${last.length} days, kilowatt hours">`;
+  for(let i=0;i<=4;i++){                         // recessive gridlines + y labels
+    const v=max*i/4, y=yOf(v);
+    g+=`<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`;
+    g+=`<text x="${L-8}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v,v<10?1:0)}</text>`;
+  }
+  g+=`<text x="${L-8}" y="${T-2}" text-anchor="end" font-size="10" fill="var(--muted)">kWh</text>`;
+  last.forEach((d,i)=>{
+    const x0=L+i*gw, gv=gen[d]||0, uv=use[d]||0;
+    const xg=x0+(gw-(bw*2+2))/2, xu=xg+bw+2;
+    if(gv>0) g+=`<path d="${barPath(xg,yOf(gv),bw,T+ph-yOf(gv),4)}" fill="var(--series-solar)"/>`;
+    if(uv>0) g+=`<path d="${barPath(xu,yOf(uv),bw,T+ph-yOf(uv),4)}" fill="var(--series-used)"/>`;
+    if(i%2===0||last.length<=8)
+      g+=`<text x="${x0+gw/2}" y="${H-9}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${esc(shortDay(d))}</text>`;
+    // invisible hit area, wider than the marks
+    g+=`<rect class="hit" x="${x0}" y="${T}" width="${gw}" height="${ph}" fill="transparent"
+         tabindex="0" role="img" aria-label="${esc(shortDay(d))}: solar ${fmt(gv,1)} kilowatt hours, used ${fmt(uv,1)}"
+         data-d="${esc(d)}" data-g="${gv}" data-u="${uv}"/>`;
+  });
+  g+=`<line x1="${L}" y1="${T+ph}" x2="${W-R}" y2="${T+ph}" stroke="var(--line)" stroke-width="1"/></svg>`;
+  $("cpEnergySvg").innerHTML=g;
+  wireTips();
+
+  // ---- table view (identity without relying on colour) ----
+  const recent=last.slice(-7).reverse();
+  $("cpDailyTable").querySelector("tbody").innerHTML = recent.length ? recent.map(d=>{
+    const gv=gen[d], uv=use[d], net=(gv==null||uv==null)?null:gv-uv;
+    const isToday=d===today;
+    return `<tr><td>${esc(shortDay(d))}${isToday?' <span class="today-cell">(so far)</span>':''}</td>`
+      +`<td class="n">${gv==null?"–":fmt(gv,1)}</td>`
+      +`<td class="n">${uv==null?"–":fmt(uv,1)}</td>`
+      +`<td class="n">${net==null?"–":(net>=0?"+":"")+fmt(net,1)}</td></tr>`;
+  }).join("") : `<tr><td colspan="4" class="sub">No daily totals yet.</td></tr>`;
+}
+
+function wireTips(){
+  const tip=$("cpTip"), wrap=tip.parentElement;
+  const show=el=>{
+    const d=el.dataset.d, g=Number(el.dataset.g), u=Number(el.dataset.u);
+    tip.innerHTML=`<b>${esc(shortDay(d))}</b><br>Solar ${fmt(g,1)} kWh<br>Used ${fmt(u,1)} kWh`;
+    const r=el.getBoundingClientRect(), w=wrap.getBoundingClientRect();
+    // Clamp inside the card so the tooltip can never be clipped at an edge.
+    tip.style.left = Math.max(64, Math.min(w.width-64, r.left-w.left+r.width/2))+"px";
+    tip.style.top  = Math.max(52, r.top-w.top+20)+"px";
+    tip.classList.add("on");
+  };
+  const hide=()=>tip.classList.remove("on");
+  // mouseover/mouseout (not mouseenter/mouseleave): they bubble and fire reliably
+  // for synthetic and touch events. focus/blur make it keyboard-reachable.
+  wrap.querySelectorAll("rect.hit").forEach(el=>{
+    el.addEventListener("mouseover",()=>show(el));
+    el.addEventListener("mouseout",hide);
+    el.addEventListener("focus",()=>show(el));
+    el.addEventListener("blur",hide);
+  });
+}
+
+/* ---------- battery SOC over time (its own axis, its own chart) ---------- */
+function renderSoc(rows){
+  const pts=rows.map(r=>({t:new Date(r.captured_at).getTime(),v:num(r.soc)})).filter(p=>p.v!=null);
+  if(pts.length<2){ $("cpSocSvg").innerHTML='<div class="sub">Not enough history yet.</div>'; return; }
+  const W=900,H=150,L=42,R=10,T=10,B=22, pw=W-L-R, ph=H-T-B;
+  const t0=pts[0].t, t1=pts[pts.length-1].t, span=(t1-t0)||1;
+  const x=t=>L+((t-t0)/span)*pw, y=v=>T+ph-(v/100)*ph;
+  let g=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" preserveAspectRatio="xMidYMid meet"
+    aria-label="Battery state of charge over the last 14 days, percent">`;
+  [0,25,50,75,100].forEach(v=>{
+    g+=`<line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/>`
+      +`<text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}%</text>`;
+  });
+  g+=`<polyline fill="none" stroke="var(--good)" stroke-width="2" stroke-linejoin="round"
+      stroke-linecap="round" points="${pts.map(p=>`${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ")}"/>`;
+  const lab=t=>new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:CONFIG.TZ});
+  g+=`<text x="${L}" y="${H-5}" font-size="10.5" fill="var(--muted)">${esc(lab(t0))}</text>`
+    +`<text x="${W-R}" y="${H-5}" text-anchor="end" font-size="10.5" fill="var(--muted)">${esc(lab(t1))}</text></svg>`;
+  $("cpSocSvg").innerHTML=g;
+}
+
+async function loadWeather(rows){
+  // ONE call covers both history and forecast: past_days gives the last 14 days
+  // and forecast_days the next 7. timezone=auto returns days in the cabin's own
+  // local time, which matches how dayKey() buckets the telemetry.
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.LAT}&longitude=${CONFIG.LON}`
+    +`&daily=cloud_cover_mean,shortwave_radiation_sum&past_days=14&forecast_days=7&timezone=auto`;
+  const WX_FAIL='<tr><td colspan="3" class="sub">Weather data unavailable right now.</td></tr>';
+  let wx=null;
+  try{ wx=await (await fetch(url)).json(); }
+  catch(e){ $("cpWx").innerHTML=WX_FAIL; return; }
+  const t=wx?.daily?.time||[], cc=wx?.daily?.cloud_cover_mean||[];
+  if(!t.length){ $("cpWx").innerHTML=WX_FAIL; return; }
+  const harvest = window.__cpHarvest || dailyHarvest(rows);
+  const today = dayKey(new Date());
+
+  // Past/today only: correlate measured harvest against that day's sky.
+  const buckets={sun:[],part:[],over:[]};
+  t.forEach((d,i)=>{ if(d>today) return;
+    const h=harvest[d], v=cc[i];
+    if(h==null || v==null) return;
+    buckets[ v<30?"sun" : v<70?"part" : "over" ].push(h); });
+  const labels={sun:['Sunny','sun'],part:['Partly','part'],over:['Overcast','over']};
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  $("cpWx").innerHTML = Object.entries(labels).map(([k,[lab,cls]])=>{
+    const a=avg(buckets[k]);
+    return `<tr><td><span class="chip ${cls}">${lab}</span></td>`
+      +`<td class="n">${buckets[k].length}</td><td class="n">${a==null?"–":fmt(a,1)+" kWh"}</td></tr>`;
+  }).join("");
+
+  // Future days from the same payload -> outlook line.
+  const fut=t.map((d,i)=>({d,v:cc[i]})).filter(x=>x.d>today && x.v!=null);
+  if(fut.length){
+    const clear=fut.filter(x=>x.v<30).length, cloudy=fut.filter(x=>x.v>=70).length;
+    $("cpForecast").textContent=`Next ${fut.length} days: ${clear} sunny, ${cloudy} overcast (forecast).`;
+  }
+}
+function dailyHarvest(rows){ const m={}; rows.forEach(r=>{ const d=dayKey(r.captured_at), v=num(r.today_pv_kwh);
+  if(v!=null) m[d]=Math.max(m[d]||0,v); }); window.__cpHarvest=m; return m; }
+
+/* ---------- sample data so the prototype renders before the collector runs ---------- */
+function sampleRows(){ const out=[], now=Date.now();
+  for(let i=14*96;i>=0;i--){ const t=now-i*15*60000, dow=new Date(t).getDay();
+    const occ=[5,6,0].includes(dow); const hour=new Date(t).getHours();
+    const sun=Math.max(0,Math.sin((hour-6)/12*Math.PI)); const pv=Math.round(sun*7000*(0.5+Math.random()*0.5));
+    const load=Math.round((occ? (400+ (hour>7&&hour<23?1800:600)) : 120)*(0.8+Math.random()*0.4));
+    const soc=Math.round(40+35*Math.sin(i/40)+ (sun*8) - (occ?6:0));
+    const day=dayKey(t);
+    out.push({captured_at:new Date(t).toISOString(), soc:Math.max(18,Math.min(99,soc)), soh:99,
+      battery_voltage:(51.2+ (soc-50)*0.02).toFixed(1), pv_power_w:pv, load_power_w:load,
+      charge_w:Math.max(0,pv-load), discharge_w:Math.max(0,load-pv),
+      battery_power_w:pv-load, status_text:"Normal",
+      today_pv_kwh:(sun*22*(0.6+Math.random()*0.4)).toFixed(1),
+      today_load_kwh:(occ? (7+Math.random()*3):(1.5+Math.random())).toFixed(1)}); }
+  return out;
+}
+function sampleReservations(){ const d=n=>dayKey(new Date(Date.now()+n*864e5));
+  return [{name:"Versical family",start_date:d(-2),end_date:d(1)},
+          {name:"Deer camp",start_date:d(9),end_date:d(12)}]; }
+
+$("cpFoot").textContent="Cabin Power · EG4 cloud → Supabase · weather by Open-Meteo";
+load();
+})();
+</script>
+</body>
+</html>
